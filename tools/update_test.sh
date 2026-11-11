@@ -33,7 +33,8 @@ log="$work/update.log"
 args=(--headless -- --update-now --update-log "$(native "$log")")
 
 server=""
-cleanup() { if [ -n "$server" ]; then kill "$server" 2> /dev/null || true; fi; }
+first=""
+cleanup() { for p in $server $first; do kill "$p" 2> /dev/null || true; done; }
 trap cleanup EXIT
 if [ "$mode" != github ]; then
   port=$(( 20000 + RANDOM % 20000 ))
@@ -48,9 +49,11 @@ fi
 [ "$mode" = zip ] && args+=(--update-full)
 
 echo "== $plat, $mode: 0.0.0 -> $v"
-MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' "$game/$exe" "${args[@]}" > "$work/first.out" 2>&1 || true
-# the first copy restarts itself into the new version; wait for that one to finish
-for _ in $(seq 180); do
+MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' "$game/$exe" "${args[@]}" > "$work/first.out" 2>&1 &
+first=$!
+# The first copy installs the update and restarts itself into the new
+# version, which checks again and quits. Give the whole thing four minutes.
+for _ in $(seq 240); do
   if [ -f "$log" ]; then
     after=$(sed -n "/^$v start/,\$p" "$log")
     if grep -qE "^(LATEST|FAILED)" <<< "$after"; then break; fi
@@ -76,4 +79,4 @@ grep -q "^$want" "$log" || fail "expected the '$want' path"
 leftovers=$(ls "$game" | grep -E '\.(part|new)$' || true)
 [ -z "$leftovers" ] || fail "temporary files left behind: $leftovers"
 echo "UPDATE TEST PASSED ($plat, $mode): $(grep '^install' "$log")"
-rm -rf "$work"
+rm -rf "$work" 2> /dev/null || true   # Windows may still be closing the last copy

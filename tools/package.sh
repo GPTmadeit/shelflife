@@ -11,6 +11,8 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 root=$PWD
 GODOT=${GODOT:-godot}
+# Each Godot step gets 15 minutes, so a stuck one fails the build instead of hanging it.
+gd() { timeout 900 "$GODOT" "$@"; }
 kit=""
 if [ "${1:-}" = "--testkit" ]; then kit=$(realpath -m "${2:?--testkit needs a directory}"); fi
 v=$(grep -oP 'VERSION := "\K[^"]+' scripts/core/version.gd)
@@ -19,11 +21,13 @@ declare -A EXE=([linux]=ShelfLife.x86_64 [windows]=ShelfLife.exe)
 declare -A PRESET=([linux]=Linux [windows]=Windows)
 
 rm -rf build/linux build/windows dist
-mkdir -p dist
-"$GODOT" --headless --path . --script tools/notices.gd -- "$root/build/NOTICES.txt" > /dev/null
+mkdir -p build dist   # build/ isn't in git: a fresh checkout has neither
+touch build/.gdignore # the editor leaves the exports alone
+gd --headless --path . --script tools/notices.gd -- "$root/build/NOTICES.txt" > /dev/null
+[ -s build/NOTICES.txt ] || { echo "NOTICES.txt wasn't written" >&2; exit 1; }
 for p in linux windows; do
   mkdir -p "build/$p"
-  "$GODOT" --headless --path . --export-release "${PRESET[$p]}" "build/$p/${EXE[$p]}"
+  gd --headless --path . --export-release "${PRESET[$p]}" "build/$p/${EXE[$p]}"
   for f in "${EXE[$p]}" ShelfLife.pck; do
     [ -s "build/$p/$f" ] || { echo "export is missing build/$p/$f" >&2; exit 1; }
   done
@@ -44,7 +48,7 @@ if [ -n "$kit" ]; then
   sed -i 's/^config\/version=".*"/config\/version="0.0.0"/' "$tmp/project.godot"
   for p in linux windows; do
     mkdir -p "$kit/$p"
-    "$GODOT" --headless --path "$tmp" --export-pack "${PRESET[$p]}" "$kit/$p/ShelfLife.pck"
+    gd --headless --path "$tmp" --export-pack "${PRESET[$p]}" "$kit/$p/ShelfLife.pck"
     [ -s "$kit/$p/ShelfLife.pck" ] || { echo "test kit export failed for $p" >&2; exit 1; }
   done
 fi

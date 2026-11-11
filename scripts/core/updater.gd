@@ -276,12 +276,12 @@ func _swap(fresh: String, target: String) -> Error:
 	if FileAccess.file_exists(old) and DirAccess.remove_absolute(old) != OK:
 		old = "%s.%d.old" % [target, Time.get_ticks_usec()]   # an older one is still in use
 	if FileAccess.file_exists(target):
-		var e := DirAccess.rename_absolute(target, old)
+		var e := _rename(target, old)
 		if e != OK:
 			return e
-	var e2 := DirAccess.rename_absolute(fresh, target)
+	var e2 := _rename(fresh, target)
 	if e2 != OK:
-		DirAccess.rename_absolute(old, target)
+		_rename(old, target)
 		return e2
 	_olds[target] = old
 	return OK
@@ -291,7 +291,19 @@ func _restore(target: String) -> void:
 	var old: String = _olds.get(target, "")
 	if old != "" and FileAccess.file_exists(old):
 		DirAccess.remove_absolute(target)
-		DirAccess.rename_absolute(old, target)
+		_rename(old, target)
+
+
+## Windows can hold a file that was just written for a moment (antivirus, the
+## search indexer), so a rename that fails gets a few more tries.
+func _rename(from: String, to: String) -> Error:
+	var e := DirAccess.rename_absolute(from, to)
+	for _try in 10:
+		if e == OK:
+			break
+		OS.delay_msec(100)
+		e = DirAccess.rename_absolute(from, to)
+	return e
 
 
 ## Leftovers from an earlier update: replaced files and unfinished downloads.
