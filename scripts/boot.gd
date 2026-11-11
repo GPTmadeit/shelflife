@@ -12,6 +12,8 @@ extends Node
 ##   --godmode                no falling damage, the Narc never calls cleanup
 ##   --fps                    print the average frame rate on quit
 ##   --quit <seconds>         quit after this long
+##   --end-quit               quit when Act One ends (full playthrough tests)
+##   --update-url, --update-now, --update-full, --update-log: see updater.gd
 
 
 func _ready() -> void:
@@ -24,7 +26,9 @@ func _ready() -> void:
 	dev.name = "Dev"
 	add_child(dev)
 	Game.apply_settings()
-	if Game.dev.has("gallery"):
+	if Game.dev.has("update-now"):
+		Updater.unattended()
+	elif Game.dev.has("gallery"):
 		Game.switch_to(load("res://scripts/dev/gallery.gd").new())
 	elif Game.dev.has("cp"):
 		for f in Game.dev.get("flags", []):
@@ -66,6 +70,9 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				i += 1
 			"--quality":
 				d.quality = int(args[i + 1])
+				i += 1
+			"--update-url", "--update-log":
+				d[a.substr(2)] = args[i + 1]
 				i += 1
 			"--gallery", "--godmode", "--fps", "--keep":
 				d[a.substr(2)] = true

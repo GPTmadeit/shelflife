@@ -17,6 +17,9 @@ var _menu: VBoxContainer
 var _settings: Control
 var _ui: Control
 var _first: Button
+var _upd_btn: Button
+var _upd_label: Label
+var _upd_link: LinkButton
 
 
 func _ready() -> void:
@@ -153,6 +156,8 @@ func _build_ui() -> void:
 	if _first == null:
 		_first = ng
 	_btn("Settings", _open_settings)
+	_upd_btn = _btn("Update", _on_update)
+	_upd_btn.visible = false
 	_btn("Quit", func(): get_tree().quit())
 	var warn := Kit.label("Contains strong language, crude humor and food in mortal peril.", 20, Color(0.75, 0.72, 0.68), Kit.body_font(700), 6)
 	warn.anchor_top = 1.0
@@ -160,14 +165,30 @@ func _build_ui() -> void:
 	warn.offset_left = 120
 	warn.offset_top = -64
 	_ui.add_child(warn)
-	var ver := Kit.label("v" + Version.VERSION, 18, Color(0.6, 0.6, 0.62), Kit.body_font(700), 6)
-	ver.anchor_left = 1.0
-	ver.anchor_right = 1.0
-	ver.anchor_top = 1.0
-	ver.anchor_bottom = 1.0
-	ver.offset_left = -110
-	ver.offset_top = -56
-	_ui.add_child(ver)
+	# bottom right: update status above, "what's new" link and the version
+	_upd_label = Kit.label("", 19, Color(0.82, 0.8, 0.76), Kit.body_font(700), 6)
+	_upd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_corner(_upd_label, -100, -66)
+	_ui.add_child(_upd_label)
+	var foot := HBoxContainer.new()
+	foot.alignment = BoxContainer.ALIGNMENT_END
+	foot.add_theme_constant_override("separation", 22)
+	_corner(foot, -60, -24)
+	_ui.add_child(foot)
+	_upd_link = LinkButton.new()
+	_upd_link.focus_mode = Control.FOCUS_NONE
+	_upd_link.underline = LinkButton.UNDERLINE_MODE_ON_HOVER
+	_upd_link.add_theme_font_override("font", Kit.body_font(800))
+	_upd_link.add_theme_font_size_override("font_size", 19)
+	for c in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
+		_upd_link.add_theme_color_override(c, Color(1.0, 0.84, 0.36))
+	_upd_link.pressed.connect(func():
+		if Updater.state == Updater.AVAILABLE:
+			Updater.open_page()
+		else:
+			Updater.open_notes())
+	foot.add_child(_upd_link)
+	foot.add_child(Kit.label("v" + Version.VERSION, 18, Color(0.6, 0.6, 0.62), Kit.body_font(700), 6))
 	var center := CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -180,6 +201,23 @@ func _build_ui() -> void:
 		_first.grab_focus())
 	center.add_child(_settings)
 	_first.grab_focus.call_deferred()
+	Updater.changed.connect(_upd_refresh)
+	_upd_refresh()
+	Updater.auto_check()
+
+
+## Anchors a control to the bottom right, spanning most of the width so
+## right-aligned text can grow to the left.
+func _corner(c: Control, top: float, bottom: float) -> void:
+	c.anchor_left = 1.0
+	c.anchor_right = 1.0
+	c.anchor_top = 1.0
+	c.anchor_bottom = 1.0
+	c.offset_left = -980
+	c.offset_right = -40
+	c.offset_top = top
+	c.offset_bottom = bottom
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE if c is Label else Control.MOUSE_FILTER_PASS
 
 
 func _btn(text: String, fn: Callable) -> Button:
@@ -198,3 +236,47 @@ func _open_settings() -> void:
 	_menu.visible = false
 	_settings.visible = true
 	_settings.focus_first()
+
+
+# --- updates ----------------------------------------------------------------
+
+func _on_update() -> void:
+	if Updater.state == Updater.AVAILABLE:
+		Updater.install()
+	elif Updater.state == Updater.DOWNLOADING:
+		Updater.cancel()
+	elif Updater.state == Updater.FAILED:
+		Updater.open_page()
+
+
+func _upd_refresh() -> void:
+	var s: int = Updater.state
+	var busy := s == Updater.DOWNLOADING or s == Updater.INSTALLING or s == Updater.RESTARTING
+	for b in _menu.get_children():
+		if b != _upd_btn:
+			(b as Button).disabled = busy
+	var show := s == Updater.AVAILABLE or busy or (s == Updater.FAILED and Updater.install_failed)
+	if not show and _upd_btn.has_focus():
+		_first.grab_focus()
+	_upd_btn.visible = show
+	_upd_btn.disabled = s == Updater.INSTALLING or s == Updater.RESTARTING
+	if s == Updater.AVAILABLE:
+		_upd_btn.text = "Update to v%s" % Updater.latest
+	elif s == Updater.DOWNLOADING:
+		_upd_btn.text = "Cancel update"
+	elif s == Updater.FAILED:
+		_upd_btn.text = "Open release page"
+	else:
+		_upd_btn.text = "Updating…"
+	if busy and _menu.visible and not _upd_btn.has_focus():
+		_upd_btn.grab_focus()
+	var text := Updater.message
+	if s == Updater.DOWNLOADING:
+		text = "Downloading version %s…  %d%%" % [Updater.latest, roundi(Updater.progress * 100.0)]
+	elif s == Updater.OFF or s == Updater.IDLE or s == Updater.LATEST:
+		text = ""
+	if text == "" and Updater.updated_from != "":
+		text = "Updated from v%s to v%s." % [Updater.updated_from, Version.VERSION]
+	_upd_label.text = text
+	_upd_link.visible = s == Updater.AVAILABLE or (Updater.updated_from != "" and not busy)
+	_upd_link.text = "What's new in v%s" % (Updater.latest if s == Updater.AVAILABLE else Version.VERSION)

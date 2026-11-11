@@ -14,6 +14,29 @@ It does not go well for anyone's faith.
 
 > **Content:** strong language, crude humor, religious satire and food in mortal peril.
 
+![Father Skim preaching to the dairy case](docs/screenshots/sermon.jpg)
+
+## Download
+
+Get the latest version from the **[releases page](https://github.com/GPTmadeit/shelflife/releases/latest)**:
+
+| System | File | How to start it |
+|---|---|---|
+| Windows 10 or 11 (64-bit) | [`ShelfLife-windows-x86_64.zip`](https://github.com/GPTmadeit/shelflife/releases/latest/download/ShelfLife-windows-x86_64.zip) | Unzip it and run `ShelfLife.exe`. SmartScreen may warn you because the game isn't code-signed: choose **More info → Run anyway**. |
+| Linux (x86-64) | [`ShelfLife-linux-x86_64.zip`](https://github.com/GPTmadeit/shelflife/releases/latest/download/ShelfLife-linux-x86_64.zip) | Unzip it and run `./ShelfLife.x86_64` (`chmod +x` it first if needed). |
+
+Keep `ShelfLife.pck` next to the program: it's the game itself.
+
+### Updates
+
+Installed copies update themselves. When a new version is out, the title screen offers **Update to v…**. Press it, and the game downloads the new version, checks it against the release's SHA-256 sums, swaps the files and restarts. A normal update is under a megabyte, because only `ShelfLife.pck` changes. The program itself is only replaced when a release moves to a new engine. Saves and settings carry over.
+
+The update check is a single request to github.com when the game starts, and it sends nothing but a `ShelfLife/<version>` user agent. Turn it off with **Settings → Check for updates**.
+
+| | |
+|---|---|
+| ![Her Holiness the Extra Virgin](docs/screenshots/her-holiness.jpg) | ![Dot, the day-old donut](docs/screenshots/dot.jpg) |
+
 ## Status
 
 **Act One: Unplanned** is playable start to finish (about 20 minutes): the
@@ -22,14 +45,11 @@ doors. Act Two is not written yet.
 
 ## Play
 
-From source, with [Godot 4.7](https://godotengine.org):
+Download a release (above), or run it from source with [Godot 4.7](https://godotengine.org):
 
 ```sh
 godot --path .
 ```
-
-Or export a build: `godot --headless --path . --export-release Linux build/linux/ShelfLife.x86_64`
-(presets for Linux and Windows are in `export_presets.cfg`).
 
 | | Keyboard | Gamepad |
 |---|---|---|
@@ -68,10 +88,30 @@ tests/shot.sh out.png 8 --cp narc --flags intro_done,sermon_done   # screenshot 
 
 Flags after `--`: `--cp <checkpoint>`, `--flags a,b`, `--dlg <node>`, `--auto`
 (reads dialogue by itself), `--bot` (walks right and hops), `--godmode`,
-`--quality 0|1|2`, `--act action@t0-t1,...`, `--shot <png> <s>`, `--burst <n> <step>`, `--trace`.
+`--quality 0|1|2`, `--act action@t0-t1,...`, `--shot <png> <s>`, `--burst <n> <step>`, `--trace`,
+`--end-quit` (quit when the act ends). The updater has its own test flags (see `scripts/core/updater.gd`).
+
+### Releasing
+
+```sh
+tools/set_version.sh 0.2.0      # bump scripts/core/version.gd and project.godot
+# add a "## 0.2.0 (date)" section to CHANGELOG.md: it becomes the release notes
+git commit -am "..." && git push
+gh workflow run release.yml --ref main   # or push a v0.2.0 tag
+```
+
+The [release workflow](.github/workflows/release.yml) checks the scripts and dialogue, then exports Linux
+and Windows builds with `tools/package.sh`. The exported game has to play all of Act One by itself. Then
+`tools/update_test.sh` updates a fresh install from a fake 0.0.0 to the new build, on Linux and on Windows,
+for both the game-file update and the full engine update. Only then is the release published. Afterwards,
+the same update runs once more against the published release on GitHub.
+
+`tools/package.sh` also works locally (it needs Godot's export templates). It writes the zips, the
+updater's `.pck` files, `manifest.json` and `SHA256SUMS.txt` into `dist/`.
 
 ## Credits
 
 Fonts: [Lilita One](https://fonts.google.com/specimen/Lilita+One) by Juan Montoreano and
 [Nunito](https://fonts.google.com/specimen/Nunito) by Vernon Adams, both under the SIL Open
-Font License (see `assets/fonts/`). Built with Godot Engine.
+Font License (see `assets/fonts/`). Built with the [Godot Engine](https://godotengine.org); each release
+zip includes `NOTICES.txt` with the engine's license and third-party notices.

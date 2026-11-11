@@ -25,6 +25,7 @@ func _ready() -> void:
 	_quality(v)
 	_check(v, "Fullscreen", "fullscreen")
 	_check(v, "Screen shake", "shake")
+	_check(v, "Check for updates", "updates")
 	var back := Kit.button("Back", 30)
 	back.alignment = HORIZONTAL_ALIGNMENT_CENTER
 	back.pressed.connect(func():

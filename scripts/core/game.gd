@@ -13,7 +13,7 @@ var scraps := {}               ## Planogram scraps collected, id -> true
 var checkpoint := "start"
 var settings := {
 	"master": 0.9, "music": 0.7, "sfx": 0.85, "voice": 0.75,
-	"fullscreen": false, "shake": true, "text_speed": 1.0, "quality": 2,
+	"fullscreen": false, "shake": true, "text_speed": 1.0, "quality": 2, "updates": true,
 }
 var last_device := "kb"        ## "kb" or "pad": picks the button glyphs in prompts
 var dev := {}                  ## parsed developer arguments (see boot.gd)

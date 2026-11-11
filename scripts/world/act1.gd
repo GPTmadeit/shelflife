@@ -1240,6 +1240,8 @@ func _ev_end_act() -> void:
 	var found := Game.scraps.size()
 	await hud.title_card("SHELF LIFE", "Act Two: Discontinued  ·  coming soon\nPlanogram scraps found: %d / %d" % [found, SCRAPS.size()], 3.5)
 	Game.go_title()
+	if Game.dev.has("end-quit"):
+		get_tree().quit()
 
 
 # --- the Narc's cleanup -------------------------------------------------------------------------

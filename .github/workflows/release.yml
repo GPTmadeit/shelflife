@@ -1,0 +1,166 @@
+name: Release
+
+# Push a tag like v0.2.0 (matching scripts/core/version.gd, with a "## 0.2.0"
+# section in CHANGELOG.md) to build, test and publish a release. Installed
+# copies of the game update themselves from it.
+#
+# It can also be started by hand (gh workflow run release.yml --ref main):
+# that releases the version in version.gd from the chosen commit. A release
+# of the same version is replaced, but only if its tag is on that commit:
+# tags are never moved, so a new build of new code needs a new version.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.7.2"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the version, tag and changelog
+        id: version
+        run: |
+          v=$(grep -oP 'VERSION := "\K[^"]+' scripts/core/version.gd)
+          p=$(grep -oP '^config/version="\K[^"]+' project.godot)
+          [ "$v" = "$p" ] || { echo "::error::version.gd says $v but project.godot says $p"; exit 1; }
+          if [ "$GITHUB_EVENT_NAME" = push ] && [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME doesn't match the game version $v"; exit 1
+          fi
+          grep -q "^## $v " CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## $v' section"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+      - name: Install Godot and export templates
+        run: |
+          base=https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable
+          curl -fsSL -o godot.zip "$base/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip && sudo mv Godot_v${GODOT_VERSION}-stable_linux.x86_64 /usr/local/bin/godot
+          curl -fsSL -o templates.tpz "$base/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          dest=~/.local/share/godot/export_templates/${GODOT_VERSION}.stable
+          mkdir -p "$dest" && unzip -q templates.tpz && mv templates/* "$dest"/
+          rm -rf godot.zip templates.tpz templates
+
+      - name: Import the project
+        run: godot --headless --path . --import > /dev/null 2>&1 || true
+
+      - name: Check scripts and dialogue
+        run: |
+          godot --headless --path . --script tests/check.gd 2>&1 | tee check.log
+          grep -q "CHECK OK" check.log
+
+      - name: Build the release files
+        run: tools/package.sh --testkit testkit
+
+      # The exported game plays all of Act One by itself (auto-read dialogue,
+      # a bot walking right, no fall damage) and has to reach the end card.
+      - name: Play Act One start to finish
+        run: |
+          mkdir play && (cd play && unzip -q ../dist/ShelfLife-linux-x86_64.zip)
+          XDG_DATA_HOME="$RUNNER_TEMP/play-data" timeout 1200 play/ShelfLife.x86_64 --headless -- \
+            --cp start --auto --bot --godmode --trace --end-quit --quit 1000 > play.log 2>&1 || true
+          grep "ACT ONE COMPLETE" play.log || { tail -80 play.log; echo "::error::the playthrough didn't reach the end of Act One"; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playthrough-log
+          path: play.log
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: testkit
+          path: testkit
+
+  # A fresh 0.0.0 install updates itself to this build from a local server,
+  # restarts and must come back as the new version, on Linux and on Windows,
+  # both for the usual game-file update and for a full engine + game update.
+  update-test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+        mode: [pck, zip]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: testkit
+          path: testkit
+      - name: Update from 0.0.0 (${{ matrix.mode }})
+        run: tools/update_test.sh ${{ runner.os == 'Windows' && 'windows' || 'linux' }} dist testkit ${{ matrix.mode }}
+
+  publish:
+    needs: [build, update-test]
+    runs-on: ubuntu-24.04
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
+      TAG: v${{ needs.build.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - name: Write the release notes
+        run: python3 tools/release_notes.py "$VERSION" > notes.md && cat notes.md
+      - name: Publish the release
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/$TAG" > /dev/null; then
+            at=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" -q .sha)
+            [ "$at" = "$GITHUB_SHA" ] || { echo "::error::$TAG is already on $at; bump the version (tools/set_version.sh) to release new code"; exit 1; }
+          fi
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release delete "$TAG" --yes
+          fi
+          gh release create "$TAG" dist/* --target "$GITHUB_SHA" --title "Shelf Life $TAG" --notes-file notes.md --latest
+
+  # The same update, from the real release on GitHub this time.
+  verify-release:
+    needs: [build, publish]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    env:
+      TAG: v${{ needs.build.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: testkit
+          path: testkit
+      - name: Update from 0.0.0 using the published release
+        run: |
+          plat=${{ runner.os == 'Windows' && 'windows' || 'linux' }}
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" -p manifest.json -p "ShelfLife-$plat-x86_64.zip" -D published
+          tools/update_test.sh "$plat" published testkit github
