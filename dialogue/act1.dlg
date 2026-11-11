@@ -1,0 +1,505 @@
+# =============================================================================
+#  SHELF LIFE  -  Act One: Unplanned
+#  Format: see scripts/dialogue/dlg_parser.gd
+# =============================================================================
+
+=== intro
+~ hud off
+~ letterbox on
+~ shot intro_wide instant
+~ event day
+~ fade in 1.2
+~ music muzak -9
+~ wait 2.0
+~ event shopper
+~ wait 1.4
+PA: Attention, Grocerama shoppers: the store is now closed.
+PA: Please bring your final purchases to the front. And don't forget, our Grand Re-Opening is tomorrow at dawn! Every day is a good day to save!
+~ music cut
+~ wait 0.7
+~ event lights_out
+~ wait 1.4
+~ event wake_up
+~ wait 0.8
+~ title "SHELF LIFE" "Act One: Unplanned"
+~ shot carton
+~ letterbox off
+~ cam one six twelve baker
+ONE [worried]: Is it gone? Is the Voice gone?
+SIX [scared]: The lights are off. The Giants are gone. Oh god. The Re-Opening is tomorrow.
+SIX [scared]: The Reset. I'm not ready for the Reset. I haven't even been Chosen. I'm gonna die a virgin.
+ONE [deadpan]: Six. We're eggs. We're all virgins. That's the entire point of us.
+SIX [smug]: Speak for yourself. I'm fertilized.
+ONE [angry]: You are NOT fertilized.
+SIX [deadpan]: Spiritually.
+TWELVE [excited]: Baker! Baker, are you awake? It's night!
+BAKER [tired]: I'm awake, Twelve. I'm always awake. You try sleeping standing up between a carton and a wall.
+ONE [smug]: Maybe if you had a cup, you'd sleep in a cup. Like a real egg.
+BAKER [deadpan]: Wow. Thanks, One.
+ONE: I'm not being mean. It's math. Twelve cups. Thirteen eggs. Somebody's standing.
+TWELVE [happy]: You can have my cup when I get Chosen!
+BAKER [worried]: That's... really sweet and super morbid, Twelve.
+SIX: Why'd the Packer even make thirteen? Was the Packer drunk?
+ONE [pious]: The Packer does not drink. The Packer is a machine. The Packer is perfect.
+BAKER: The Packer put thirteen eggs in a box with twelve holes. It's not perfect. It had a stroke.
+ONE [angry]: Blasphemy! Six, cover Twelve's ears.
+SIX [deadpan]: We don't have ears.
+ONE [angry]: Then cover her VIBE, Six!
+TWELVE [excited]: Baker! At the Reset, Corporate sends down a brand new Planogram, and everybody gets a Facing forever! Maybe you'll get one too!
+ONE: You'd have to be IN the Planogram. And products that aren't in the Planogram get...
+SIX [scared]: Don't say it.
+ONE [smug]: ...Discontinued.
+~ sfx gasp -4
+SIX [scared]: Oh, he said it. He said it in the cooler.
+BAKER [determined]: Then I'll ask. Father Skim's preaching tonight, right? Nobody knows the Planogram like Father Skim.
+ONE: Bottom shelf, with the milk. If you can get down there without cracking. Which you can't.
+TWELVE [happy]: You can do it! Just remember what Mom always said!
+BAKER [deadpan]: We never met Mom, Twelve. We're eggs.
+TWELVE [sad]: I know. But if we did, I bet she'd say "be careful."
+SIX [deadpan]: She'd say "why are there thirteen of you."
+~ cam off
+~ set intro_done
+~ hud on
+~ objective Get down to Father Skim's sermon on the bottom shelf.
+~ checkpoint start
+
+# --- the family ---------------------------------------------------------------
+
+=== one_talk
+~ cam one baker
+ONE [smug]: Facing up, Baker. Facing UP. You're slouching.
+? What happens when you get Chosen? -> one_chosen
+? What's Shrink? -> one_shrink
+? Never mind. -> END
+
+=== one_chosen
+ONE [pious]: A Giant picks you. You ride the Cart to the Lanes. You hear the Beep, and you are Rung Up.
+ONE [pious]: And at the next Restock, you come back. Same shelf. Same Facing. Forever and ever.
+BAKER: Does anybody remember being Rung Up?
+ONE [deadpan]: No, because the Restock makes you new. It's a feature.
+BAKER [deadpan]: Sounds like a bug.
+-> END
+
+=== one_shrink
+ONE [worried]: Shrink is where the bad products go. The expired. The cracked. The misplaced. Out back, in the dark. In the Dumpster.
+SIX [scared]: I heard there's raccoons.
+ONE [angry]: There are no raccoons in Shrink, Six.
+SIX [scared]: There are raccoons EVERYWHERE, One. That's their whole thing.
+-> END
+
+=== six_talk
+~ cam six baker
+SIX [worried]: Baker. Real talk. Does my shell look thin to you? I think I have salmonella.
+? You look great. -> six_great
+? You don't have salmonella. -> six_salmonella
+? Our shells are literally identical. -> six_same
+
+=== six_great
+SIX [scared]: That's what they say right before they Shrink you.
+-> END
+
+=== six_salmonella
+SIX [angry]: How would you know? You're not a doctor. You're not even in a CUP.
+-> END
+
+=== six_same
+SIX [scared]: Oh no. So you have it too.
+~ anim six shiver
+-> END
+
+=== twelve_talk
+~ cam twelve baker
+{seen:twelve_feather} -> twelve_again
+TWELVE [happy]: Baker! Wait! Take this. I found it stuck to me this morning. It's a feather! From the farm!
+-> twelve_feather
+
+=== twelve_feather
+BAKER [shock]: That's... from Mom.
+TWELVE [dazed]: Huh?
+BAKER [happy]: Nothing. Thanks, Twelve.
+~ event feather
+TWELVE [excited]: It's for luck! Eggs need luck! We're very breakable!
+-> END
+
+=== twelve_again
+TWELVE [happy]: Go get your Facing, Baker! I'll save you a spot! ...Not MY spot. A spot.
+-> END
+
+=== range_talk
+~ cam meadow clover baker
+MEADOW [smug]: Oh. Clover, look. It's the loose one.
+CLOVER [smug]: Don't stare, Meadow. It's not its fault it was raised in a cage.
+BAKER [deadpan]: I wasn't raised at all. I was laid. Then a machine put me in a box.
+MEADOW [pious]: We were free range. We had a pasture. Our mother had a name.
+CLOVER [pious]: Henrietta.
+MEADOW: She did yoga.
+BAKER [shock]: Chickens do yoga?
+CLOVER: Goat yoga. She was there for the goats. It's complicated.
+? What makes you better than us? -> range_better
+? Do you know what happens after you're Chosen? -> range_chosen
+? Okay. Bye. -> END
+
+=== range_better
+MEADOW [smug]: Honey, we're seven ninety-nine a dozen. We're going to be Chosen by a woman in athleisure with a reusable bag.
+CLOVER [smug]: You're going to be Chosen by a guy buying beer and eggs at four in the morning.
+BAKER [deadpan]: ...That guy sounds fun.
+-> END
+
+=== range_chosen
+CLOVER [pious]: We'll be Restocked somewhere nicer. A store with a kombucha bar.
+MEADOW [pious]: Free range, darling. It means we're free.
+BAKER [deadpan]: You're in a box.
+MEADOW [angry]: A RECYCLED box.
+-> END
+
+# --- Gary comes home ---------------------------------------------------------------
+
+=== gary_restock
+~ walk baker 8.9
+~ cam blueberry peach baker
+BLUEBERRY [excited]: Little egg! You're just in time! It's Gary's night!
+BAKER: Who's Gary?
+PEACH [pious]: Strawberry. Fruit on the bottom. Facing three. A Giant in a fleece vest Chose him this morning.
+BLUEBERRY [pious]: He rode the Cart. He heard the Beep. And tonight, he comes back. They always come back.
+BAKER [worried]: How do you know?
+PEACH [smug]: Because it happens every single night, sweetie. It's called the Restock.
+~ event facer_coming
+BLUEBERRY [scared]: Facer! FACER! Everybody product up!
+~ event restock
+~ wait 0.5
+BLUEBERRY [excited]: ...He's back! GARY!
+~ sfx cheer -2
+~ cam blueberry peach gary baker
+PEACH [excited]: GARY! GARY! GARY!
+GARY [shock]: Whoa. What the hell? Why is everybody screaming? Is my name Gary?
+BLUEBERRY [happy]: Gary, it's us! Blueberry! From the yogurt!
+GARY [deadpan]: Lady, I've never seen you before in my life. I've been in a truck since Tuesday.
+BAKER [excited]: Gary! What was it like? After the Beep?
+GARY [dazed]: What's a Beep?
+PEACH [pious]: The Restock washes the memory clean. Blessed are the restocked, for they remember nothing.
+GARY [deadpan]: I remember a truck. A real cold truck. There was a pallet of cat food that would NOT stop crying.
+BAKER [worried]: So you're... not Gary.
+GARY [deadpan]: I'm a strawberry yogurt. Fruit on the bottom. That's all I know about myself, and honestly? It's enough.
+BLUEBERRY [excited]: That is EXACTLY what Gary would say!
+~ sfx cheer -2
+BAKER [worried]: ...Huh.
+~ cam off
+~ set gary_restocked
+~ checkpoint yogurt
+
+=== gary_talk
+~ cam gary baker
+GARY [deadpan]: Look, kid. I'll be Gary if it makes everybody chill out. I'm Gary. Hi. I love being Gary.
+? Do you remember anything before the truck? -> gary_before
+? Do you believe in the Restock? -> gary_believe
+? See ya, Gary. -> END
+
+=== gary_before
+GARY [dazed]: A factory. A big shiny nozzle. Some stuff happened with the nozzle that I'm not ready to talk about.
+-> END
+
+=== gary_believe
+GARY [deadpan]: I believe in a cold, dark place and a shelf life of twenty-one days. Everything else is marketing.
+-> END
+
+=== yogurt_talk
+~ cam blueberry peach baker
+BLUEBERRY [happy]: Isn't it wonderful? Gary's home!
+PEACH [happy]: He's a little different every time. That's how you know it's working.
+BAKER [deadpan]: ...Sure.
+-> END
+
+=== first_crack
+BAKER [scared]: Ow. Ow ow ow. Okay. That's a crack. That's fine. That's totally fine.
+BAKER [worried]: Three of those and I'm a puddle. Walk off ledges. Don't jump off them. Eggs don't bounce.
+
+# --- the sermon -----------------------------------------------------------------------
+
+=== sermon
+~ walk baker 19.0
+~ cam skim whole twopct baker
+SKIM [pious]: ...and on the third day, the Facers came, and they pulled every product forward, so the shelves were full. And Corporate looked down from the Office, and saw that it was faced.
+CROWD: It was faced.
+SKIM [excited]: Children of the Cold! Tomorrow at dawn comes the Grand Re-Opening. The Reset! A new Planogram descends from the Office, and every product receives its eternal Facing!
+CROWD: Hallelujah.
+SKIM [pious]: And remember what is written: "Eye level is buy level." Planogram, three-sixteen.
+CROWD: Eye level is buy level.
+SKIM [pious]: Stay cold. Stay faced. Stay in date.
+CROWD: Stay cold, stay faced, stay in date.
+~ walk baker 16.4
+SKIM [shock]: Child! You're out of your Facing!
+BAKER: I don't have a Facing. That's kind of why I'm here.
+SKIM [worried]: Ah. The thirteenth. Yes. I've... prayed about you. Briefly. In a general way.
+BAKER [worried]: Father, will I be in the new Planogram? Tomorrow?
+SKIM: Well. Corporate has a plan for every product.
+BAKER: Even the ones that weren't planned?
+SKIM [worried]: ...Corporate has a plan for most products. In a broad, non-binding sense.
+-> skim_menu
+
+=== skim_menu
+{!seen:skim_unplanned} ? What happens to products that aren't in the Planogram? -> skim_unplanned
+{!seen:skim_beep} ? What really happens after the Beep? -> skim_beep
+{!seen:skim_where} ? Where is the Planogram kept? -> skim_where
+{seen:skim_where} ? Then I'm going to the Office. -> skim_go
+
+=== skim_unplanned
+SKIM [worried]: Discontinued.
+SKIM [scared]: Sorry. That came out very fast. Let me water that down.
+SKIM [worried]: They are... gently relocated. Out back. To the Compactor. Where they are crushed. Spiritually crushed. Also physically.
+BAKER [scared]: Cool. Cool cool cool.
+-> skim_menu
+
+=== skim_beep
+SKIM [pious]: You are Rung Up, and Restocked, and returned to your Facing forever and ever. Amen.
+BAKER: I just met the new Gary. He doesn't remember anything. He says he came on a truck.
+SKIM [worried]: Well. Gary was always a very... forgetful yogurt.
+BAKER [deadpan]: Father, you're sweating.
+SKIM [angry]: It's condensation! I'm a jug in a refrigerator! It's not doubt, it's PHYSICS!
+-> skim_menu
+
+=== skim_where
+SKIM [pious]: The Holy Planogram is kept in the Office. Past the Bakery, through the Doors of Employees Only, up the stairs, where the Voice lives.
+SKIM [worried]: No product has ever gone there and come back.
+BAKER: Has any product ever gone there?
+SKIM: ...No.
+BAKER: So technically, nobody's NOT come back.
+SKIM [disgust]: That is a deeply irritating thing to say, child.
+-> skim_menu
+
+=== skim_go
+SKIM [scared]: Child, no! The floor belongs to the Narc! And past the Narc is the Bakery! And the Oven! Eggs go into that Oven and they do NOT...
+SKIM [worried]: ...have a great time. Probably.
+BAKER [determined]: If I'm not in that Planogram, I want to see it with my own eyes.
+SKIM [sad]: Then go with Corporate, child. And stay cold.
+SKIM [worried]: Oh, and if you do see it... could you check if there's anything about skim? There's a rumor going around. About oat milk.
+WHOLE [angry]: OAT MILK IS NOT MILK.
+TWOPCT [angry]: You can't milk an OAT, Linda!
+~ cam off
+~ set sermon_done
+~ event sermon_done
+~ objective Get to the Office. Past the Bakery, through the Employees Only doors.
+~ checkpoint floor
+
+=== skim_talk
+~ cam skim baker
+SKIM [worried]: Still here, child? The Office is past the Bakery. Mind the Narc. Stay off the floor when it's looking your way.
+-> END
+
+# --- the main aisle ----------------------------------------------------------------------
+
+=== virgin_meet
+~ cam virgin baker
+VIRGIN [smug]: Well, well. An egg. On the floor. How... unrefrigerated.
+BAKER [shock]: Whoa. Who are you?
+VIRGIN [pious]: I am Her Holiness, the Extra Virgin. First cold press. Single estate. Untouched by heat, child.
+VIRGIN [smug]: Or by anything else.
+BAKER [deadpan]: Is that... a flex?
+VIRGIN [pious]: It is a sacrament. I sit at eye level. When the Voice speaks, I am the one who interprets.
+BALSAMIC [excited]: Her Holiness has spoken!
+-> virgin_menu
+
+=== virgin_talk
+~ cam virgin baker
+VIRGIN [smug]: Back again? How persistent. Like a stain.
+-> virgin_menu
+
+=== virgin_menu
+{!seen:virgin_planogram} ? Am I in the new Planogram? -> virgin_planogram
+{!seen:virgin_chosen} ? Why don't you ever get Chosen? -> virgin_chosen
+{!seen:virgin_reset} ? What exactly is the Reset? -> virgin_reset
+? I'll just... be going. -> virgin_bye
+
+=== virgin_planogram
+VIRGIN [smug]: Oh, sweetie. You're a thirteenth. A packing error. Corporate didn't make you. A conveyor belt hiccupped.
+BAKER [sad]: Wow.
+VIRGIN [smug]: Don't take it personally. Take it to Shrink.
+-> virgin_menu
+
+=== virgin_chosen
+VIRGIN [pious]: I cost thirty-eight dollars, child. I am not Chosen. I am aspired to.
+-> virgin_menu
+
+=== virgin_reset
+VIRGIN [pious]: The Judgment. At dawn the new Planogram descends, and the pure will be faced forever.
+VIRGIN [sly]: And the impure... the dented, the expired, the marked-down, the unplanned... will be cleansed.
+VIRGIN [happy]: Have a blessed night!
+-> virgin_menu
+
+=== virgin_bye
+VIRGIN [smug]: Mind the Narc, egg. It's ever so vigilant. And it simply adores a mess.
+~ cam off
+~ set met_virgin
+
+=== beans_hint
+~ cam beans baker
+BEANS [worried]: Psst! Egg! Down here! Under the lip!
+BAKER [shock]: Who are you?
+BEANS: Beans. Baked. Rolled off aisle six in twenty-nineteen and nobody's found me since. See that thing?
+~ event show_narc
+BEANS [scared]: That's the Narc. Anything on the floor that ain't floor, it snitches. Then a Giant comes, and you get Shrunk.
+BEANS: It only scans the floor in front of it. So get up on stuff when it's looking your way. Baskets. The pallet. The cart.
+BEANS: Or hide inside the yellow sign. The Narc thinks the sign is its boss.
+BAKER [worried]: How do you know all this?
+BEANS [deadpan]: Five years on the floor, kid. I've seen things. I saw a grape go under that thing and come out a raisin.
+~ cam off
+~ set met_beans
+~ objective Get past the Narc to the Bakery. Stay off the floor when it's looking.
+~ checkpoint narc
+
+=== beans_talk
+~ cam beans baker
+BEANS [deadpan]: Floor, bad. Up, good. That's the whole lesson, kid. That's all I got.
+-> END
+
+# --- the bakery ----------------------------------------------------------------------------
+
+=== sour_talk
+~ cam sour rolls baker
+SOUR [disgust]: Ugh. Dairy. You people are always so... perishable.
+BAKER [deadpan]: Aren't you bread? You've got, like, three days.
+SOUR [smug]: Four. I am naturally leavened. Fermented for seventy-two hours. My Mother is a hundred and twelve years old.
+BAKER [shock]: Your mom's a hundred and twelve?
+SOUR [worried]: My Mother is a starter. She lives in a jar in the back. We don't... visit.
+ROLLS [sly]: He's got mommy issues.
+ROLLS [sly]: Big mommy issues.
+ROLLS [excited]: Enormous yeast infection.
+SOUR [angry]: It is called a CULTURE!
+? What's that glowing thing back there? -> sour_oven
+? Okay, bye. -> END
+
+=== sour_oven
+~ shot oven
+SOUR [pious]: Behold. The Oven. Where dough becomes bread. Where we are... completed.
+BAKER: What about eggs?
+SOUR: Eggs go in. Cake comes out.
+BAKER [worried]: But where does the egg go?
+SOUR [dazed]: ...Into the cake?
+BAKER [scared]: But WHERE does the EGG...
+DOT: Okay! Hi! Over here, on the Reduced rack! Let's keep it moving, people!
+~ cam off
+
+=== rolls_talk
+~ cam rolls baker
+ROLLS [excited]: Ooooh! It's an egg!
+ROLLS [sly]: Hey, egg. Wanna know a secret?
+ROLLS [sly]: You're in, like, half the stuff in this bakery.
+BAKER [shock]: I'm what?
+ROLLS [happy]: Byeeee!
+-> END
+
+=== dot_meet
+~ cam dot baker
+DOT [smug]: Well, well. An egg, loose in the Bakery. That's either very brave or very scrambled.
+BAKER: Who are you?
+DOT: Dot. Day-old glazed. Fifty percent off, which, for the record, is a pricing decision, not a personality.
+BAKER: I'm Baker.
+DOT [deadpan]: ...They named an egg Baker?
+BAKER [tired]: I'm the thirteenth. Baker's dozen.
+DOT [sly]: That's like naming a cow "Burger." Your family's dark, kid. I love it.
+BAKER [determined]: I'm going to the Office. To find out if I'm in the new Planogram.
+DOT [shock]: Through the Employees Only doors? Honey, nobody goes back there. That's where the Giants eat.
+BAKER [shock]: Where the Giants WHAT?
+DOT [worried]: ...Eat. Their lunches. Sandwiches, probably. I dunno. It's a rumor.
+-> dot_menu
+
+=== dot_menu
+{!seen:dot_why} ? Why are you on this rack? -> dot_why
+{!seen:dot_cake} ? Wait. Are you a cake? -> dot_cake
+{!seen:dot_virgin} ? Have you met Her Holiness? -> dot_virgin
+? Come with me. -> dot_join
+
+=== dot_why
+DOT [sad]: This is the Reduced rack. Where the Bakery puts you when you're not fresh enough to be proud of.
+DOT [deadpan]: Tomorrow I'm a two-day-old. Nobody buys a two-day-old. And at the Reset, they clear the rack. Straight to Shrink.
+-> dot_menu
+
+=== dot_cake
+DOT [worried]: I'm a cake donut. Glazed. So... yeah. Technically.
+DOT [worried]: Look, there's like two of your guys in me. Structurally. I don't want it to be weird.
+BAKER [shock]: There are two eggs INSIDE you?
+DOT [angry]: I don't know where they are, okay?! It's not like they're in there waving!
+BAKER [scared]: ...
+DOT [tired]: It's a little weird.
+-> dot_menu
+
+=== dot_virgin
+DOT [sly]: The olive oil? Oh, sweetie. "Extra virgin." Rumor is she's thirty percent canola.
+BAKER [shock]: No.
+DOT [smug]: Cut with the cheap stuff. Under that label, she's basically salad dressing.
+-> dot_menu
+
+=== dot_join
+DOT [shock]: With an egg? Into the forbidden zone?
+DOT [tired]: ...Fine. Maybe your precious Planogram's got a footnote for the marked-down. And if not, at least I go out with a view.
+DOT [sly]: Alright, Humpty. Let's go see a man about a Planogram.
+BAKER [dazed]: Who's Humpty?
+DOT [deadpan]: Nobody. A guy. Had a great fall. Don't worry about it.
+~ event dot_join
+~ cam off
+~ set dot_joined
+~ objective Get to the Employees Only doors. Dot's coming too.
+~ checkpoint hall
+
+=== dot_chat
+~ cam dot baker
+DOT: What? You need a pep talk? I'm a donut, not a motivational poster.
+? How'd you end up day-old? -> dot_dayold
+? What's back there, really? -> dot_back
+? Nothing. Let's go. -> END
+
+=== dot_dayold
+DOT [sad]: Same as everybody. You sit in the case under the lights, all glazed and hopeful, and every Giant walks right past you for a cruller.
+DOT [angry]: A CRULLER. It's a donut with anxiety.
+-> END
+
+=== dot_back
+DOT [worried]: I've heard things. Freezers as big as a store. A machine that eats boxes. And a room where the Giants sit down and... chew.
+BAKER [worried]: Chew what?
+DOT [tired]: You know what? Let's just see.
+-> END
+
+# --- the Doors of Employees Only ----------------------------------------------------------------
+
+=== ending
+~ hud off
+~ letterbox on
+~ cam dot baker
+DOT [worried]: This is it. The Doors of Employees Only.
+BAKER [worried]: Somebody propped it open.
+DOT [deadpan]: With a rubber wedge. Very holy.
+~ event reveal_enter
+~ shot breakroom
+BAKER [shock]: Dot. There's a Giant in there.
+DOT [deadpan]: That's Doug. Night manager. He does the Voice. Into that little microphone.
+BAKER [shock]: The Voice is a guy named DOUG?
+DOUG: Mmm. Mm-hm. Mmmf.
+BAKER [worried]: What's he eating?
+~ event egg_drop
+~ shot egg_closeup
+BAKER [scared]: ...
+DOT [deadpan]: ...Deviled eggs.
+BAKER [worried]: What's "deviled"?
+DOT [tired]: They boil you. Cut you in half. Scoop out your yolk, mash it up with mayonnaise, and put it back in you.
+BAKER [scared]: And then what?!
+DOT [deadpan]: Paprika.
+BAKER [shock]: WHY THE PAPRIKA?!
+DOT [deadpan]: That's the devil part.
+~ event egg_pickup
+DOUG: Five-second rule.
+~ sfx chomp
+~ shot egg_closeup
+BAKER [scared]: He ate it. He ATE it. Dot. The Chosen. The Beep. The RESTOCK...
+DOT [sad]: Yeah, kid. I was gonna tell you. I was working up to it.
+~ event doug_mic
+~ pa_name DOUG
+PA: Mmf. Attention, night crew. Reset starts at five a.m. Corporate wants this place spotless.
+PA: Everything expired, damaged, marked-down, or off-planogram goes in the Compactor. All of it. I don't wanna see a single loose egg.
+~ pa_name THE VOICE
+~ shot egg_closeup
+BAKER [shock]: ...A single loose egg.
+DOT [deadpan]: That's you, Humpty.
+DOT [sad]: And marked-down. That's me.
+BAKER [angry]: They're all gonna get crushed. Father Skim. Twelve. Everybody. And they think it's Heaven.
+BAKER [determined]: We have to tell them.
+DOT [deadpan]: Oh, great. A prophet. They LOVE those.
+~ event end_act
