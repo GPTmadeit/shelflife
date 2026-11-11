@@ -64,6 +64,8 @@ func run(id: String) -> void:
 			i += 1
 			if not cond_ok(e.cond):
 				continue
+			if Game.dev.has("trace"):
+				print("dlg %s:%d %s %s" % [cur, e.line, e.t, e.get("name", e.get("who", ""))])
 			if e.t == "line":
 				await _say(e)
 			elif e.t == "goto":

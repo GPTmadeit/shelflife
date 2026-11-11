@@ -258,6 +258,7 @@ func _type(rtl: RichTextLabel, voice: String, speaker: Node) -> void:
 		shown += cps * dt
 		var cur := mini(int(shown), n)
 		var i := last
+		var paused := false
 		while i < cur:
 			var ch := plain[i]
 			if ch != " " and i % 2 == 0:
@@ -268,12 +269,15 @@ func _type(rtl: RichTextLabel, voice: String, speaker: Node) -> void:
 			var nxt := plain[i] if i < n else " "
 			if ch in ".!?" and nxt == " ":
 				pause = 0.24
+				paused = true
 				break
 			if ch in ",;:—" and nxt == " ":
 				pause = 0.09
+				paused = true
 				break
 		last = i
-		shown = float(last)
+		if paused:
+			shown = float(last)   # keep fractional progress unless we stopped for punctuation
 		rtl.visible_characters = last
 	rtl.visible_characters = -1
 	_typing = false

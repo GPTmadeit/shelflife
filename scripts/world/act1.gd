@@ -47,7 +47,7 @@ const DEATH := {
 const SCRAPS := {
 	"s1": [Vector3(-10.8, 10.8, 0), "PLANOGRAM 1:1", "In the beginning there was the Warehouse, and the Warehouse was without form, and pallets were upon the face of the dock."],
 	"s2": [Vector3(34.1, 3.2, 0), "PLANOGRAM 3:16", "For Corporate so loved the shelf that it gave its only Facing, that whosoever is scanned shall not perish, but have Restock everlasting."],
-	"s3": [Vector3(79.3, 2.6, 0), "PLANOGRAM 4:20", "And the night crew did take their fifteen, out back, by the Dumpster. And lo, it was a long fifteen."],
+	"s3": [Vector3(79.3, 2.3, 0), "PLANOGRAM 4:20", "And the night crew did take their fifteen, out back, by the Dumpster. And lo, it was a long fifteen."],
 	"s4": [Vector3(99.6, 0.0, 0), "PLANOGRAM 7:7", "Eye level is buy level. The bottom shelf is for the poor. The top shelf is for the tall, and the damned."],
 	"s5": [Vector3(119.6, 7.5, 0), "PLANOGRAM 9:12", "Blessed are the marked-down, for they shall inherit the clearance bin."],
 	"s6": [Vector3(134.8, 2.2, 0), "PLANOGRAM 11:30", "Thou shalt not covet thy neighbor's Facing. Unless it is an endcap. Then go nuts."],
@@ -378,9 +378,9 @@ func _build_aisle() -> void:
 	for k in 3:
 		store.box(Vector3(66.0, 0.15 + k * 0.32, -0.6), Vector3(6.0, 0.16, 3.2), wood)
 	store.solid_lane(63.0, 69.0, 0.0, 0.9)
-	store.box(Vector3(66.6, 2.9, -0.7), Vector3(3.2, 4.0, 2.8), Mats.solid(Color(0.7, 0.55, 0.36), 0.9), 0.05)
-	store.solid_lane(65.0, 68.2, 0.9, 4.9)
-	store.label("SUPER\nSAVER", Vector3(66.6, 3.1, 0.72), 0.75, Color(0.75, 0.15, 0.1))
+	store.box(Vector3(66.6, 2.1, -0.7), Vector3(3.2, 2.4, 2.8), Mats.solid(Color(0.7, 0.55, 0.36), 0.9), 0.05)
+	store.solid_lane(65.0, 68.2, 0.9, 3.3)
+	store.label("SUPER\nSAVER", Vector3(66.6, 2.1, 0.72), 0.7, Color(0.75, 0.15, 0.1))
 	_cart(73.2)
 	_mop_bucket(79.3)
 	for k in 4:
@@ -425,11 +425,11 @@ func _cart(x: float) -> void:
 
 func _mop_bucket(x: float) -> void:
 	var yel := Mats.skin(Color(1.0, 0.8, 0.08), 0.45)
-	var prof := PackedVector2Array([Vector2(0, 0), Vector2(1.15, 0), Vector2(1.3, 2.6), Vector2(1.18, 2.6), Vector2(1.05, 0.3), Vector2(0, 0.3)])
+	var prof := PackedVector2Array([Vector2(0, 0), Vector2(1.15, 0), Vector2(1.3, 2.3), Vector2(1.18, 2.3), Vector2(1.05, 0.3), Vector2(0, 0.3)])
 	store.mesh(Meshes.lathe(prof, 22), yel, Vector3(x, 0, -0.2))
-	store.mesh(Meshes.cyl(1.17, 1.17, 0.1, 22), Mats.glass(Color(0.35, 0.45, 0.4, 0.8)), Vector3(x, 2.1, -0.2))
+	store.mesh(Meshes.cyl(1.17, 1.17, 0.1, 22), Mats.glass(Color(0.35, 0.45, 0.4, 0.8)), Vector3(x, 1.85, -0.2))
 	store.mesh(Meshes.cyl(0.12, 0.12, 22.0, 8), Mats.solid(Color(0.4, 0.3, 0.2), 0.7), Vector3(x + 0.6, 12.0, -0.5), Vector3(0, 0, -0.12))
-	store.solid_lane(x - 1.25, x + 1.25, 0.0, 2.6)
+	store.solid_lane(x - 1.25, x + 1.25, 0.0, 2.3)
 
 
 # --- geometry: bakery ----------------------------------------------------------------------------
@@ -1035,7 +1035,6 @@ func _ev_wake_up() -> void:
 			Sfx.blip(Cast.info("one").voice)
 		await get_tree().create_timer(0.07).timeout
 	player.rig.set_product(false)
-	player.locked = false
 
 
 func _ev_facer_coming() -> void:
@@ -1230,6 +1229,7 @@ func _ev_doug_mic() -> void:
 
 
 func _ev_end_act() -> void:
+	print("ACT ONE COMPLETE at %.1fs" % _t)
 	Game.set_flag("act1_done")
 	Game.save_game()
 	await hud.fade(true, 1.4)
