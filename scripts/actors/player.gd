@@ -17,6 +17,7 @@ const JUMP_H := 2.75
 const MAX_FALL := 34.0
 const CRACK_H := 3.5
 const SPLAT_H := 8.6
+const JUMP_SHARE := 0.35       ## how much of a jump's own height counts toward a hard landing
 const MAX_CRACKS := 3
 
 signal cracked(n: int)
@@ -34,6 +35,9 @@ var godmode := false
 var _coyote := 0.0
 var _buffer := 0.0
 var _peak_y := 0.0
+var _takeoff_y := 0.0         ## height of the last ground we stood on
+var _shadow_mat: StandardMaterial3D
+var _shadow_size := Vector3.ONE
 var _step_t := 0.0
 var _debris: Array[Node3D] = []
 var _bot := false             ## dev autopilot: walk right, hop over whatever blocks
@@ -52,12 +56,20 @@ func _ready() -> void:
 	add_child(cs)
 	rig = Cast.make_rig("baker")
 	add_child(rig)
+	# Baker's shadow stays on the ground below him and shrinks as he rises
+	_shadow_mat = Mats.blob(true)
+	rig.shadow.material_override = _shadow_mat
+	rig.shadow.top_level = true
+	rig.shadow_always = true
+	rig.shadow.visible = true
+	_shadow_size = rig.shadow.scale
 	floor_snap_length = 0.25
 	floor_max_angle = deg_to_rad(50.0)
 	axis_lock_linear_z = true
 	godmode = Game.dev.has("godmode")
 	_bot = Game.dev.has("bot")
 	_peak_y = global_position.y
+	_takeoff_y = global_position.y
 
 
 func _physics_process(dt: float) -> void:
@@ -97,6 +109,7 @@ func _physics_process(dt: float) -> void:
 	velocity.z = 0.0
 	if on_floor:
 		_peak_y = global_position.y
+		_takeoff_y = global_position.y
 	move_and_slide()
 	position.z = 0.0
 	var now_floor := is_on_floor()
@@ -120,9 +133,40 @@ func _physics_process(dt: float) -> void:
 			Sfx.play("step", -14.0, randf_range(0.9, 1.2))
 
 
+func _process(_dt: float) -> void:
+	_update_shadow()   # every frame, also while a cutscene moves him about
+
+
+## Lays the blob shadow on whatever is below (a ray down from the feet).
+func _update_shadow() -> void:
+	var sh: MeshInstance3D = rig.shadow
+	if not rig.visible:
+		sh.visible = false
+		return
+	var from := global_position + Vector3(0, 0.3, 0)
+	var q := PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -18.0, 0))
+	q.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(q)
+	if hit.is_empty():
+		sh.visible = false
+		return
+	var height: float = maxf(0.0, global_position.y - hit.position.y)
+	var k := clampf(1.0 - height / 9.0, 0.3, 1.0)
+	sh.visible = true
+	sh.global_position = hit.position + Vector3(0, 0.03, 0)
+	sh.global_rotation = Vector3(-PI * 0.5, 0, 0)
+	sh.scale = _shadow_size * (0.7 + 0.3 * k)
+	_shadow_mat.albedo_color.a = (0.8 if Game.quality() == 0 else 0.4) * (0.4 + 0.6 * k)
+
+
 func _on_land() -> void:
 	var drop := _peak_y - global_position.y
+	# How hard it lands: the fall from the ground we left, plus a share of
+	# whatever a jump added on top. Walking off a ledge counts in full; a hop
+	# off a crate doesn't crack an egg, a leap off a table still does.
+	var impact := (_takeoff_y - global_position.y) + JUMP_SHARE * (_peak_y - _takeoff_y)
 	_peak_y = global_position.y
+	_takeoff_y = global_position.y
 	var cushion := false
 	for i in get_slide_collision_count():
 		var c := get_slide_collision(i).get_collider()
@@ -133,14 +177,13 @@ func _on_land() -> void:
 		velocity.y = clampf(drop * 2.2, 7.0, 13.5)
 		rig.land(1.3)
 		Sfx.play("bounce", -4.0, randf_range(0.95, 1.1))
-		_peak_y = global_position.y   # bounces never hurt
-		return
+		return   # bounces never hurt
 	if godmode:
 		rig.land(clampf(drop / 3.0, 0.3, 1.2))
 		return
-	if drop > SPLAT_H:
+	if impact > SPLAT_H:
 		die("splat")
-	elif drop > CRACK_H:
+	elif impact > CRACK_H:
 		crack()
 	else:
 		rig.land(clampf(drop / 3.0, 0.25, 1.0))
@@ -189,6 +232,7 @@ func respawn(pos: Vector3, keep_cracks := 0) -> void:
 	rig.position = Vector3.ZERO
 	alive = true
 	_peak_y = pos.y
+	_takeoff_y = pos.y
 
 
 ## Little dust puffs kicked up from the feet.

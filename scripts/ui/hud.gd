@@ -24,6 +24,10 @@ var _scrap: PanelContainer
 var _scrap_title: Label
 var _scrap_text: Label
 var _scrap_open := false
+var _flash: ColorRect
+var _hint: PanelContainer
+var _hint_label: Label
+var _hint_tween: Tween
 var _t := 0.0
 
 
@@ -34,6 +38,29 @@ func _ready() -> void:
 	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_root)
+	# a soft vignette: the store at night, darker toward the corners. A blended
+	# full-screen layer costs old integrated graphics a few frames a second,
+	# so Low quality goes without.
+	var vg := Gradient.new()
+	vg.offsets = PackedFloat32Array([0.0, 0.58, 1.0])
+	vg.colors = PackedColorArray([Color(0, 0, 0, 0), Color(0, 0, 0, 0), Color(0, 0, 0.02, 0.34)])
+	var vt := GradientTexture2D.new()
+	vt.gradient = vg
+	vt.width = 128
+	vt.height = 128
+	vt.fill = GradientTexture2D.FILL_RADIAL
+	vt.fill_from = Vector2(0.5, 0.5)
+	vt.fill_to = Vector2(1.21, 0.5)
+	var vr := TextureRect.new()
+	vr.texture = vt
+	vr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vr.stretch_mode = TextureRect.STRETCH_SCALE
+	vr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	vr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(vr)
+	var vig := func(): vr.visible = Game.quality() >= 1 and not Game.dev.has("novig")
+	vig.call()
+	Game.graphics_changed.connect(vig)
 	# letterbox bars
 	for i in 2:
 		var b := ColorRect.new()
@@ -142,12 +169,36 @@ func _ready() -> void:
 	sv.add_child(hint)
 	_scrap.visible = false
 	_root.add_child(_scrap)
+	# a hint along the bottom (the controls, the first time you can move)
+	_hint = PanelContainer.new()
+	_hint.add_theme_stylebox_override("panel", Kit.panel(Color(0.05, 0.05, 0.07, 0.8), 16, 0, Color.WHITE, 26))
+	_hint.anchor_left = 0.5
+	_hint.anchor_right = 0.5
+	_hint.anchor_top = 1.0
+	_hint.anchor_bottom = 1.0
+	_hint.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_hint.offset_top = -70
+	_hint.offset_bottom = -70
+	_hint_label = Kit.label("", 25, Color(0.97, 0.95, 0.9), Kit.body_font(800))
+	_hint.add_child(_hint_label)
+	_hint.modulate.a = 0.0
+	_hint.visible = false
+	_root.add_child(_hint)
+	# a white flash (a crack)
+	_flash = ColorRect.new()
+	_flash.color = Color(1, 1, 1, 0)
+	_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_root.add_child(_flash)
 	# fade on top of everything
 	_fade = ColorRect.new()
 	_fade.color = Color(0, 0, 0, 0)
 	_fade.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_fade)
+	# ...except the title and death cards: the end-of-act cards play over black
+	_root.move_child(_card, -1)
 
 
 func _process(dt: float) -> void:
@@ -235,6 +286,38 @@ func prompt(text: String, screen_pos: Vector2) -> void:
 
 func prompt_hide() -> void:
 	_prompt.visible = false
+
+
+## A line of help along the bottom of the screen for a few seconds.
+func hint(text: String, secs := 9.0) -> void:
+	_hint_label.text = text
+	_hint.visible = true
+	_hint.size = Vector2.ZERO
+	if _hint_tween:
+		_hint_tween.kill()
+	_hint_tween = create_tween()
+	_hint_tween.tween_property(_hint, "modulate:a", 1.0, 0.4)
+	_hint_tween.tween_interval(secs)
+	_hint_tween.tween_property(_hint, "modulate:a", 0.0, 0.8)
+	_hint_tween.tween_callback(func(): _hint.visible = false)
+
+
+func hint_hide() -> void:
+	if _hint.visible:
+		if _hint_tween:
+			_hint_tween.kill()
+		_hint_tween = create_tween()
+		_hint_tween.tween_property(_hint, "modulate:a", 0.0, 0.3)
+		_hint_tween.tween_callback(func(): _hint.visible = false)
+
+
+## A quick flash over the picture (a crack). Off with screen shake off.
+func flash(strength := 0.3, secs := 0.22) -> void:
+	if not Game.settings.get("shake", true):
+		return
+	_flash.color.a = strength
+	var tw := create_tween()
+	tw.tween_property(_flash, "color:a", 0.0, secs)
 
 
 func toast(text: String) -> void:

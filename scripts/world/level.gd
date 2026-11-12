@@ -76,6 +76,9 @@ var _interact_target: Node3D = null
 var _rng := RandomNumberGenerator.new()
 var _t := 0.0
 var _trace_t := 0.0
+var _hitstops := 0
+var _lamps_low: Array[Light3D] = []    ## see _lamp_sets()
+var _lamps_high: Array[Light3D] = []
 
 
 func _ready() -> void:
@@ -185,12 +188,33 @@ func _environment() -> void:
 	add_child(sun)
 	sun.look_at_from_position(Vector3(-8, 50, 9), Vector3(0, 0, 0))
 	Game.tune(env, sun)
-	Game.graphics_changed.connect(func(): Game.tune(env, sun))
+	Game.graphics_changed.connect(func():
+		Game.tune(env, sun)
+		_apply_lamp_sets())
 
 
 func shake(amount: float) -> void:
 	if cam != null:
 		cam.shake(amount)
+
+
+## Two ways to light the same place: `high` as designed, and `low`, fewer
+## lamps doing the same job for Low quality. Every lamp that reaches a mesh
+## draws it again, which is most of the frame on old integrated graphics.
+func _lamp_sets(low: Array, high: Array) -> void:
+	for l in low:
+		_lamps_low.append(l)
+	for l in high:
+		_lamps_high.append(l)
+	_apply_lamp_sets()
+
+
+func _apply_lamp_sets() -> void:
+	var low := Game.quality() == 0
+	for l in _lamps_low:
+		l.visible = low
+	for l in _lamps_high:
+		l.visible = not low
 
 
 func _floor_mat(tint := Color.WHITE) -> StandardMaterial3D:
@@ -464,6 +488,7 @@ func _start_follow() -> void:
 	var dot: Node3D = actors.dot
 	dot.talk_node = "dot_chat"
 	dot.barks = []
+	dot.ground_shadow = true
 	if not Game.busy:
 		dot.global_position = player.global_position + Vector3(-1.6, 0, -0.3)
 	_trail.clear()
@@ -502,7 +527,11 @@ func _finish_act(big: String, small: String, next_act: int, teaser: String) -> v
 	for id in scraps.keys():
 		if Game.scraps.has(id):
 			found += 1
-	await hud.title_card("SHELF LIFE", "%s\nPlanogram scraps found in this act: %d / %d" % [teaser, found, scraps.size()], 3.5)
+	var st: Dictionary = Game.stats.get("act%d" % act, {})
+	var secs := int(st.get("time", 0.0))
+	var tally := "Scraps %d / %d   ·   Cracks %d   ·   Scrambled %d   ·   %d:%02d" % [
+		found, scraps.size(), int(st.get("cracks", 0)), int(st.get("deaths", 0)), secs / 60, secs % 60]
+	await hud.title_card("SHELF LIFE", "%s\n%s" % [teaser, tally], 4.5)
 	if Game.dev.has("end-quit"):
 		get_tree().quit()
 		return
@@ -514,12 +543,42 @@ func _finish_act(big: String, small: String, next_act: int, teaser: String) -> v
 		Game.go_title.call_deferred()
 
 
+## The controls, along the bottom of the screen, the first time a save gets to move.
+func _ev_controls_hint() -> void:
+	if Game.flag("hint_controls"):
+		return
+	Game.set_flag("hint_controls")
+	if Game.last_device == "pad":
+		hud.hint("Stick  move        A  jump  (hold it to go higher)        X  talk", 10.0)
+	else:
+		hud.hint("A / D  move        Space  jump  (hold it to go higher)        E  talk", 10.0)
+
+
+## Freezes the picture for a few hundredths of a second: a hit you can feel.
+func hitstop(secs := 0.08) -> void:
+	if not Game.settings.get("shake", true):
+		return
+	_hitstops += 1
+	Engine.time_scale = 0.05
+	await get_tree().create_timer(secs, true, false, true).timeout
+	_hitstops -= 1
+	if _hitstops <= 0:
+		Engine.time_scale = 1.0
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+
+
 # --- crack / death / respawn -------------------------------------------------------------------------
 
 func _on_crack(n: int) -> void:
 	if Game.dev.has("trace"):
 		print("CRACK %d at (%.1f, %.1f)" % [n, player.global_position.x, player.global_position.y])
+	Game.count(act, "cracks")
 	hud.shell(n)
+	hud.flash(0.28)
+	hitstop(0.08)
 	shake(0.6)
 	if n == 1 and not Game.visited.has("first_crack") and n < Player.MAX_CRACKS and runner.has("first_crack"):
 		runner.run("first_crack")
@@ -534,6 +593,10 @@ func _on_died(reason: String) -> void:
 	hud.prompt_hide()
 	if Game.dev.has("trace"):
 		print("DIED %s at (%.1f, %.1f)" % [reason, player.global_position.x, player.global_position.y])
+	Game.count(act, "deaths")
+	if reason != "late":
+		hud.flash(0.4, 0.3)
+		hitstop(0.11)
 	shake(1.0)
 	var d: Array = DEATH.get(reason, DEATH.splat)
 	var quips: Array = d[1]
@@ -577,6 +640,7 @@ func restart_checkpoint() -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
+	Game.count(act, "time", dt)
 	if Game.dev.has("trace"):
 		_trace_t -= dt
 		if _trace_t <= 0.0:

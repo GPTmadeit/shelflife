@@ -23,10 +23,10 @@ Installed copies update themselves. When a new version is out, the title screen 
 |---|---|---|
 | Move | A / D or ← / → | Left stick / D-pad |
 | Jump (hold for higher) | Space, W or ↑ | A |
-| Talk / advance dialogue | E or Enter (Space advances too) | X / A |
+| Talk / advance dialogue | E or Enter (Space advances too; hold it to fast-forward) | X / A |
 | Pause | Esc | Start |
 
-Eggs crack. A short drop is fine, but jump off anything tall and you'll crack your shell. Three cracks and you're done. Bread and other soft things are safe to land on. Once you finish Act One, the title screen can start either act.
+Eggs crack. A short drop is fine, and so is hopping off a crate, but jump or fall off anything tall and you'll crack your shell. Three cracks and you're done. Bread and other soft things are safe to land on. Once you finish Act One, the title screen can start either act.
 
 ### Changes in {{VERSION}}
 

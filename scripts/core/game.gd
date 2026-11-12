@@ -11,6 +11,7 @@ var flags := {}                ## story flags, name -> true
 var visited := {}              ## dialogue nodes seen, id -> true
 var scraps := {}               ## Planogram scraps collected, id -> true
 var checkpoint := "start"
+var stats := {}                ## "act1" -> {time, cracks, deaths}: shown on the end-of-act card
 var act := 1                   ## which act the checkpoint belongs to
 var settings := {
 	"master": 0.9, "music": 0.7, "sfx": 0.85, "voice": 0.75,
@@ -86,6 +87,7 @@ func new_game() -> void:
 	flags = {}
 	visited = {}
 	scraps = {}
+	stats = {}
 	checkpoint = "start"
 	act = 1
 	start_level("start")
@@ -100,6 +102,7 @@ func replay_act(n: int) -> void:
 	for k in visited.keys():
 		if k.begins_with("a2_") == (n == 2):
 			visited.erase(k)
+	stats.erase("act%d" % n)
 	start_act(n)
 
 
@@ -123,6 +126,14 @@ func set_flag(name: String, on := true) -> void:
 		flags.erase(name)
 
 
+## Adds to one of an act's counters ("time", "cracks", "deaths").
+func count(act_no: int, what: String, by := 1.0) -> void:
+	var k := "act%d" % act_no
+	if not stats.has(k) or typeof(stats[k]) != TYPE_DICTIONARY:
+		stats[k] = {}
+	stats[k][what] = float(stats[k].get(what, 0.0)) + by
+
+
 # --- save -------------------------------------------------------------------
 
 func has_save() -> bool:
@@ -132,7 +143,7 @@ func has_save() -> bool:
 func save_game() -> void:
 	var d := {
 		"version": Version.VERSION, "act": act, "checkpoint": checkpoint, "flags": flags,
-		"visited": visited, "scraps": scraps, "time": Time.get_unix_time_from_system(),
+		"visited": visited, "scraps": scraps, "stats": stats, "time": Time.get_unix_time_from_system(),
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if f != null:
@@ -151,6 +162,7 @@ func load_game() -> bool:
 	flags = _dict(d.get("flags", {}))
 	visited = _dict(d.get("visited", {}))
 	scraps = _dict(d.get("scraps", {}))
+	stats = _dict(d.get("stats", {}))
 	return true
 
 

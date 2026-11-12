@@ -125,3 +125,28 @@ static func decal(tex: Texture2D, shaded := true) -> StandardMaterial3D:
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.render_priority = 1
 	return m
+
+
+## A soft round shadow to lay on the ground under a character. `own` gives
+## a private copy (for one whose shadow fades as it leaves the ground).
+static func blob(own := false) -> StandardMaterial3D:
+	var k := "blob"
+	if not _cache.has(k):
+		var g := Gradient.new()
+		g.offsets = PackedFloat32Array([0.0, 0.6, 1.0])
+		g.colors = PackedColorArray([Color(0, 0, 0, 1.0), Color(0, 0, 0, 0.85), Color(0, 0, 0, 0.0)])
+		var t := GradientTexture2D.new()
+		t.gradient = g
+		t.width = 64
+		t.height = 64
+		t.fill = GradientTexture2D.FILL_RADIAL
+		t.fill_from = Vector2(0.5, 0.5)
+		t.fill_to = Vector2(1.0, 0.5)
+		var m := StandardMaterial3D.new()
+		m.albedo_texture = t
+		m.albedo_color = Color(1, 1, 1, 0.78)
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		m.render_priority = -1
+		_cache[k] = m
+	return _cache[k].duplicate() if own else _cache[k]

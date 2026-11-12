@@ -2,6 +2,19 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.3.0 (2026-11-12)
+
+How the game feels, and how fast it runs.
+
+- **Fairer falls.** A jump's own height now counts for only about a third toward a hard landing. Hopping off a crate, a pallet or a basket no longer cracks your shell. Leaping off a table or a tall shelf still does, and walking off a ledge works as before.
+- **Shadows at Low quality.** Every character now has a soft shadow on the ground at Low, where real shadows are off. Baker's shadow stays on the ground beneath him while he's in the air, at every quality setting, so you can see where he'll land.
+- **Act One runs faster on old graphics cards.** On old Intel graphics the back hall went from about 39 to 59 frames a second, and the dairy case from 51 to 58. It looks the same: lamps no longer spill into the next room, and Low quality lights the dairy case and the bakery with one lamp each instead of two.
+- A crack now lands with a flash and a split-second freeze. Both are off when screen shake is off.
+- The controls appear along the bottom of the screen the first time you can move.
+- Hold the advance button to fast-forward a conversation.
+- The cards at the end of an act now appear. Since the first release they were drawn behind the fade to black, so the act just ended on a dark screen. The second card now shows your scraps, cracks, deaths and time.
+- At Medium and High quality the picture darkens slightly toward the corners.
+
 ## 0.2.4 (2026-11-12)
 
 - A character's speech bubble now sits above the Talk button instead of underneath it.

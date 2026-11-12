@@ -62,6 +62,7 @@ SIX [deadpan]: She'd say "why are there thirteen of you."
 ~ hud on
 ~ objective Get down to Father Skim's sermon on the bottom shelf.
 ~ checkpoint start
+~ event controls_hint
 
 # --- the family ---------------------------------------------------------------
 

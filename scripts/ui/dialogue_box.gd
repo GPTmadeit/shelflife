@@ -27,6 +27,9 @@ var _waiting := false
 var _choosing := false
 var _pick := 0
 var _t := 0.0
+var _held := false        ## the advance button went down on a line and is still down
+var _hold_t := 0.0
+var _ff_t := 0.0
 
 
 func _ready() -> void:
@@ -142,6 +145,22 @@ func _process(dt: float) -> void:
 	_t += dt
 	if _arrow.visible:
 		_arrow.offset_top = -82 + sin(_t * 6.0) * 4.0
+	# Keep the button held to fast-forward: lines fill in at once and move on.
+	# (Only a press that started on a line counts, so a held jump can't do it.)
+	if _held and Input.is_action_pressed("advance") and not _choosing:
+		_hold_t += dt
+		if _hold_t > 0.45:
+			_ff_t -= dt
+			if _typing:
+				_skip = true
+			elif _waiting and _ff_t <= 0.0:
+				_ff_t = 0.11
+				_waiting = false
+				advanced.emit()
+	else:
+		_held = false
+		_hold_t = 0.0
+		_ff_t = 0.0
 
 
 func _input(event: InputEvent) -> void:
@@ -160,6 +179,9 @@ func _input(event: InputEvent) -> void:
 	if not press:
 		return
 	get_viewport().set_input_as_handled()
+	if event.is_action_pressed("advance"):
+		_held = true
+		_hold_t = 0.0
 	if _typing:
 		_skip = true
 	elif _waiting:

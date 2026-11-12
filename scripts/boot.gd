@@ -12,6 +12,7 @@ extends Node
 ##   --act a@t0-t1,...        hold input actions between times (seconds)
 ##   --gallery                character gallery
 ##   --godmode                no falling damage, the Narc never calls cleanup
+##   --nolights, --novig, --noblob   hide the lamps / the vignette / the blob shadows (to measure what they cost)
 ##   --fps                    print the average frame rate on quit
 ##   --quit <seconds>         quit after this long
 ##   --end-quit               quit when Act One ends (full playthrough tests)

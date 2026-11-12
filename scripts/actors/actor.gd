@@ -12,6 +12,7 @@ var barks: Array = []        ## lines said in a speech bubble when Baker is near
 var bark_radius := 5.5
 var bark_cooldown := 7.0
 var watch_player := true
+var ground_shadow := false   ## lay the blob shadow on the ground below (for one who hops about, like Dot)
 var player: Node3D
 var _bark_t := 1.5
 var _bark_i := 0
@@ -69,6 +70,8 @@ func _process(dt: float) -> void:
 		_bubble.global_position = head_pos() + Vector3(0, _bubble_lift, 0)
 		if _bubble_t <= 0.0:
 			_bubble.visible = false
+	if ground_shadow:
+		_drop_shadows()
 	if player == null or not is_instance_valid(player):
 		return
 	var d := player.global_position.distance_to(global_position)
@@ -84,6 +87,17 @@ func _process(dt: float) -> void:
 		if Game.bark_ok():
 			bubble(barks[_bark_i % barks.size()])
 			_bark_i += 1
+
+
+func _drop_shadows() -> void:
+	var space := get_world_3d().direct_space_state
+	for r in rigs:
+		var sh: MeshInstance3D = r.shadow
+		if sh == null or not sh.visible:
+			continue
+		var from: Vector3 = r.global_position + Vector3(0, 0.3, 0)
+		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -12.0, 0)))
+		sh.global_position = (hit.position if not hit.is_empty() else r.global_position) + Vector3(0, 0.03, 0)
 
 
 func bubble(text: String, dur := 3.2) -> void:

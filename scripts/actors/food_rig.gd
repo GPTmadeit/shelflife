@@ -46,6 +46,8 @@ var mouth_mat: StandardMaterial3D
 var arms: Array[Node3D] = []
 var legs: Array[Node3D] = []
 var extras: Array[Node3D] = []     ## parts that hide in product mode (halo, ...)
+var shadow: MeshInstance3D         ## soft blob on the ground (when real shadows are off)
+var shadow_always := false         ## Baker's shows at every quality: it marks where he'll land
 
 var emotion := "neutral"
 var talking := false
@@ -126,6 +128,7 @@ func build(s: Dictionary) -> void:
 		_build_face()
 	if not simple:
 		_build_limbs()
+		_build_shadow()
 	set_emotion(s.get("emotion", "neutral"))
 
 
@@ -570,6 +573,34 @@ func _build_limbs() -> void:
 			var s := _mi(Meshes.rounded_box(Vector3(0.14, 0.08, 0.21) * h, 0.035 * h, 2), shoe, piv)
 			s.position = Vector3(0, -leg_len + 0.02 * h, 0.04 * h)
 			legs.append(piv)
+
+
+## A soft blob under the feet. Real shadows are off at Low quality, and
+## without one a character looks like it is floating over the shelf.
+func _build_shadow() -> void:
+	var sx: float = maxf(_shoulder_dx, _hip_dx * 2.0) * 2.5 + 0.1
+	var sz := sx
+	if kind == "block":
+		sx = float(spec.get("w", h)) * 1.3
+		sz = maxf(float(spec.get("d", sx * 0.6)) * 1.7, 0.5)
+	elif kind == "donut":
+		sz = sx * 0.55
+	shadow = MeshInstance3D.new()
+	shadow.name = "Shadow"
+	shadow.mesh = Meshes.quad(1.0, 1.0)
+	shadow.material_override = Mats.blob()
+	shadow.rotation.x = -PI * 0.5
+	shadow.scale = Vector3(sx, sz, 1.0)
+	shadow.position.y = 0.025
+	shadow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(shadow)
+	_shadow_quality()
+	Game.graphics_changed.connect(_shadow_quality)
+
+
+func _shadow_quality() -> void:
+	if shadow != null:
+		shadow.visible = (shadow_always or Game.quality() == 0) and not Game.dev.has("noblob")
 
 
 # --- control ------------------------------------------------------------------

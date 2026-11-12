@@ -40,6 +40,7 @@ var mic: Node3D
 var door_leaf: Node3D
 var _cleanup := false
 var _flicker: OmniLight3D
+var _door_light: OmniLight3D
 
 
 func _setup() -> void:
@@ -77,12 +78,17 @@ func _begin() -> void:
 
 func _build_floor() -> void:
 	var fm := _floor_mat()
-	for seg in [[-18.0, 30.0], [30.0, 92.0], [92.0, 133.0], [133.0, 180.0]]:
+	# One slab per room, and the back hall's split from the breakroom behind
+	# its wall: a mesh is drawn again for every lamp whose range reaches it,
+	# and the floor fills half the screen.
+	for seg in [[-18.0, 30.0, -48.0, 8.0], [30.0, 92.0, -48.0, 8.0], [92.0, 130.0, -48.0, 8.0],
+			[130.0, 180.0, -4.0, 8.0], [130.0, 180.0, -48.0, -4.0]]:
 		var w: float = seg[1] - seg[0]
+		var d: float = seg[3] - seg[2]
 		var p := MeshInstance3D.new()
-		p.mesh = Meshes.box(Vector3(w, 0.4, 56.0))
+		p.mesh = Meshes.box(Vector3(w, 0.4, d))
 		p.material_override = fm
-		p.position = Vector3(seg[0] + w * 0.5, -0.2, -20.0)
+		p.position = Vector3(seg[0] + w * 0.5, -0.2, seg[2] + d * 0.5)
 		add_child(p)
 	store.solid_lane(-20, 182, -2.0, 0.0)
 	store.solid_lane(-16.0, -12.3, 0.0, 40.0)
@@ -134,8 +140,11 @@ func _build_dairy() -> void:
 	_deck(8, 18, 13.4)
 	_deck(18, 25, 4.4)
 	_deck(18, 28, 11.6)
-	for bx in [0.0, 18.0]:
-		store.omni(Vector3(bx, 9.5, 3.0), Color(0.78, 0.88, 1.0), 1.6, 19.0)
+	# two lamps along the case (the second stops short of the aisle); at Low
+	# quality, one in the middle
+	_lamp_sets([store.omni(Vector3(8.0, 10.5, 5.5), Color(0.78, 0.88, 1.0), 2.3, 21.9)],
+		[store.omni(Vector3(0.0, 9.5, 3.0), Color(0.78, 0.88, 1.0), 1.6, 19.0),
+		store.omni(Vector3(16.0, 9.5, 3.0), Color(0.78, 0.88, 1.0), 1.8, 13.9)])
 	# --- products
 	var whites := [Color(0.95, 0.95, 0.97)]
 	var caps := [Color(0.85, 0.15, 0.15), Color(0.2, 0.42, 0.9), Color(0.85, 0.36, 0.7), Color(0.3, 0.7, 0.9)]
@@ -327,7 +336,9 @@ func _build_bakery() -> void:
 	var wood := Mats.solid(Color(0.55, 0.36, 0.2), 0.7)
 	var steel := Mats.solid(Color(0.7, 0.72, 0.75), 0.3, 0.7)
 	# back: counter, display case, oven wall, sign
-	store.box(Vector3(112, 18, -12.5), Vector3(42, 36, 1), Mats.solid(Color(0.32, 0.22, 0.16), 0.9))
+	# (in two pieces: the end of this wall stands inside the breakroom lamp's reach)
+	store.box(Vector3(107.75, 18, -12.5), Vector3(33.5, 36, 1), Mats.solid(Color(0.32, 0.22, 0.16), 0.9))
+	store.box(Vector3(127.55, 18, -12.5), Vector3(6.1, 36, 1), Mats.solid(Color(0.32, 0.22, 0.16), 0.9))
 	store.box(Vector3(110, 4.5, -7.0), Vector3(30, 9, 3), Mats.solid(Color(0.45, 0.28, 0.18), 0.7))
 	store.box(Vector3(110, 10.5, -7.0), Vector3(30, 3.0, 3), Mats.glass(Color(0.75, 0.85, 0.9, 0.18)))
 	store.row("cake", 97.5, 122.5, 9.0, -7.0, 3.6, [Color(0.98, 0.9, 0.8), Color(0.45, 0.25, 0.15), Color(0.98, 0.7, 0.75)], [Color(0.98, 0.5, 0.6), Color(1, 1, 1), Color(0.35, 0.2, 0.12)])
@@ -337,8 +348,10 @@ func _build_bakery() -> void:
 	store.label("BAKERY", Vector3(112, 22.5, -11.8), 4.5, Color(1.0, 0.75, 0.4), 14, Color(0.25, 0.1, 0.03))
 	store.row("loaf", 95.5, 104.5, 13.0, -11.6, 3.4, [Color(0.75, 0.5, 0.25), Color(0.6, 0.38, 0.18)], [Color(0.9, 0.75, 0.5)])
 	store.row("baguette", 118.5, 128.5, 13.5, -11.6, 4.6, [Color(0.85, 0.62, 0.32)])
-	store.omni(Vector3(112, 9.0, -8.0), Color(1.0, 0.55, 0.22), 2.6, 22.0)
-	store.omni(Vector3(110, 10.0, 4.0), Color(1.0, 0.85, 0.65), 1.4, 22.0)
+	# the oven's glow and a warm fill in front; at Low quality, one lamp between them
+	_lamp_sets([store.omni(Vector3(111, 9.5, 2.5), Color(1.0, 0.74, 0.5), 2.8, 18.9)],
+		[store.omni(Vector3(112, 9.0, -8.0), Color(1.0, 0.55, 0.22), 2.9, 18.0),
+		store.omni(Vector3(110, 10.0, 4.0), Color(1.0, 0.85, 0.65), 1.6, 18.0)])
 	# bread trays as a step
 	var tray := Mats.skin(Color(0.25, 0.55, 0.35), 0.6)
 	for k in 3:
@@ -419,7 +432,7 @@ func _build_backhall() -> void:
 	memo.outline_size = 0
 	store.mesh(Meshes.cyl(0.55, 0.55, 2.6, 14), Mats.skin(Color(0.85, 0.1, 0.08), 0.4), Vector3(133.2, 6.5, -3.6))
 	store.box(Vector3(146.0, 22.6, -3.9), Vector3(3.0, 1.2, 0.3), Mats.glow(Color(1.0, 0.15, 0.1), 2.5))
-	_flicker = store.omni(Vector3(140.0, 14.0, 1.0), Color(0.85, 0.95, 0.88), 1.6, 20.0)
+	_flicker = store.omni(Vector3(141.0, 9.0, 2.0), Color(0.85, 0.95, 0.88), 2.0, 11.0)
 
 
 
@@ -430,8 +443,11 @@ func _build_breakroom() -> void:
 	store.box(Vector3(bx, 20, -40.0), Vector3(46, 40, 1), paint)
 	store.box(Vector3(bx - 22.5, 20, -22.0), Vector3(1, 40, 36), paint)
 	store.box(Vector3(bx + 22.5, 20, -22.0), Vector3(1, 40, 36), paint)
-	store.omni(Vector3(bx, 30, -18), Color(1.0, 0.95, 0.85), 2.4, 48.0)
-	store.omni(Vector3(bx - 2, 7, -8), Color(1.0, 0.9, 0.75), 1.4, 14.0)
+	# The room's lamp hangs deep in the room, clear of the hall's wall and floor. The one
+	# just inside the door is for the ending and comes on with it.
+	store.omni(Vector3(bx, 26, -29), Color(1.0, 0.95, 0.85), 2.9, 23.5)
+	_door_light = store.omni(Vector3(bx - 2, 7, -8), Color(1.0, 0.9, 0.75), 1.4, 14.0)
+	_door_light.visible = false
 	var lam := Mats.solid(Color(0.85, 0.85, 0.8), 0.4)
 	store.box(Vector3(bx, 12.5, -22), Vector3(24, 0.8, 11), lam, 0.2)
 	for lx in [bx - 10.0, bx + 10.0]:
@@ -605,7 +621,7 @@ func _spawn_cast() -> void:
 func _build_triggers() -> void:
 	_trigger("gary", Rect2(8.6, 8.0, 7.0, 2.0), func(): runner.run("gary_restock"),
 		func(): return not Game.flag("gary_restocked"))
-	_trigger("cc_hint", Rect2(15.5, 8.0, 2.4, 2.0), func(): actors.blueberry.bubble("Walk off onto the cream cheese! Don't JUMP down, you'll crack!", 4.0),
+	_trigger("cc_hint", Rect2(15.5, 8.0, 2.4, 2.0), func(): actors.blueberry.bubble("Down the cream cheese, hon! And WALK off the tall drops. Don't jump!", 4.0),
 		func(): return Game.flag("gary_restocked"))
 	_trigger("sermon", Rect2(8.0, 1.5, 20.0, 2.5), func(): runner.run("sermon"),
 		func(): return not Game.flag("sermon_done"))
@@ -821,6 +837,7 @@ func _ev_dot_join() -> void:
 
 
 func _ev_reveal_enter() -> void:
+	_door_light.visible = true
 	dot_follow = false
 	player.set_physics_process(false)
 	Sfx.play("door", -6.0)
@@ -963,7 +980,7 @@ func _on_respawn() -> void:
 
 func _tick(_dt: float) -> void:
 	if _flicker != null:
-		_flicker.light_energy = 1.6 if fmod(_t, 4.7) > 0.25 or fmod(_t * 13.0, 1.0) > 0.5 else 0.3
+		_flicker.light_energy = 2.0 if fmod(_t, 4.7) > 0.25 or fmod(_t * 13.0, 1.0) > 0.5 else 0.4
 
 
 ## Pull the camera back where the level is tall.
