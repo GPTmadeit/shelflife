@@ -145,6 +145,11 @@ func _on_respawn() -> void:
 	pass
 
 
+## Is this a moment for a chat with Dot? (Not while something is chasing you.)
+func _companion_ok() -> bool:
+	return true
+
+
 # --- environment ---------------------------------------------------------------------
 
 func _environment() -> void:
@@ -642,6 +647,7 @@ func _update_follow(dt: float) -> void:
 
 func _update_prompt() -> void:
 	_interact_target = null
+	Actor.prompted = null
 	if Game.busy or not player.alive or player.locked:
 		hud.prompt_hide()
 		return
@@ -660,7 +666,8 @@ func _update_prompt() -> void:
 			continue
 		# Dot tags along everywhere: anyone else in reach gets the button first
 		if dot_follow and id == "dot":
-			companion = a
+			if _companion_ok():
+				companion = a
 		elif d / reach < best:
 			best = d / reach
 			_interact_target = a
@@ -674,4 +681,5 @@ func _update_prompt() -> void:
 		hud.prompt_hide()
 		return
 	var sp := cam.unproject_position(hp)
+	Actor.prompted = _interact_target
 	hud.prompt("%s  Talk" % Game.glyph("interact"), sp)

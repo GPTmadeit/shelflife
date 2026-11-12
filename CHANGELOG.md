@@ -2,6 +2,12 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.2.4 (2026-11-12)
+
+- A character's speech bubble now sits above the Talk button instead of underneath it.
+- Dot no longer offers a chat in the middle of the run across the Baler.
+- The stockroom's safety board ("this department has worked 0 days without an accident") was too high on the wall to see. It now hangs behind the mousetraps.
+
 ## 0.2.3 (2026-11-12)
 
 - In Act One, three story moments could be jumped clean over: meeting Her Holiness, Beans's warning about the Narc, and the bakery checkpoint. Their zones now cover wherever you can land.

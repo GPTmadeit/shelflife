@@ -17,6 +17,11 @@ var _bark_t := 1.5
 var _bark_i := 0
 var _bubble: Label3D
 var _bubble_t := 0.0
+var _bubble_lift := 0.45
+
+## Whoever the Talk prompt is over right now (the level sets it): their
+## speech bubble moves up to sit above the prompt instead of under it.
+static var prompted: Node3D = null
 var _walking := false
 
 
@@ -52,6 +57,7 @@ func _ready() -> void:
 	_bubble.width = 420
 	_bubble.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_bubble.render_priority = 10
+	_bubble.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM   # the text grows upward
 	_bubble.visible = false
 	add_child(_bubble)
 
@@ -59,7 +65,8 @@ func _ready() -> void:
 func _process(dt: float) -> void:
 	if _bubble_t > 0.0:
 		_bubble_t -= dt
-		_bubble.global_position = head_pos() + Vector3(0, 0.7, 0)
+		_bubble_lift = move_toward(_bubble_lift, 1.3 if prompted == self else 0.45, dt * 5.0)
+		_bubble.global_position = head_pos() + Vector3(0, _bubble_lift, 0)
 		if _bubble_t <= 0.0:
 			_bubble.visible = false
 	if player == null or not is_instance_valid(player):
@@ -83,7 +90,8 @@ func bubble(text: String, dur := 3.2) -> void:
 	_bubble.text = text
 	_bubble.visible = true
 	_bubble_t = dur
-	_bubble.global_position = head_pos() + Vector3(0, 0.7, 0)
+	_bubble_lift = 1.3 if prompted == self else 0.45
+	_bubble.global_position = head_pos() + Vector3(0, _bubble_lift, 0)
 	var voice: String = Cast.info(id).get("voice", "one")
 	for k in mini(6, 1 + text.length() / 8):
 		get_tree().create_timer(k * 0.07).timeout.connect(func():

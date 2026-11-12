@@ -129,7 +129,7 @@ func _build_shell() -> void:
 	store.box(Vector3(-11.4, 22.6, -1.0), Vector3(0.4, 1.2, 3.0), Mats.glow(Color(1.0, 0.15, 0.1), 2.5))
 	# the rubber wedge, kicked across the floor
 	store.mesh(Meshes.prism(Vector3(1.4, 0.7, 1.2)), Mats.solid(Color(0.2, 0.15, 0.12), 0.8), Vector3(-6.4, 0.35, 1.4), Vector3(0, 0.7, 0))
-	store.label("BREAK ROOM", Vector3(-2.0, 21.5, -14.9), 2.2, Color(0.35, 0.3, 0.25), 0)
+	store.label("BREAK ROOM", Vector3(-2.0, 18.4, -14.9), 2.2, Color(0.35, 0.3, 0.25), 0)
 	store.label("STOCKROOM", Vector3(72, 26.0, -11.9), 4.0, Color(0.95, 0.78, 0.1), 14, Color(0.1, 0.1, 0.1))
 	store.label("RECEIVING", Vector3(140, 26.0, -11.9), 4.0, Color(0.95, 0.78, 0.1), 14, Color(0.1, 0.1, 0.1))
 
@@ -291,10 +291,15 @@ func _build_stockroom() -> void:
 		store.box(Vector3(gx, 0.45, -8.0), Vector3(6.0, 0.9, 5.0), wood)
 		store.row("crate", gx - 1.5, gx + 1.5, 0.9, -8.0, 2.8, card, card, 0.1)
 		store.row("crate", gx - 1.5, gx + 1.5, 3.1, -8.0, 2.8, card, card, 0.1)
-	store.label("THIS DEPARTMENT HAS WORKED", Vector3(64, 14.3, -11.9), 0.7, Color(0.9, 0.9, 0.85))
-	store.label("DAYS WITHOUT AN ACCIDENT", Vector3(64, 11.2, -11.9), 0.7, Color(0.9, 0.9, 0.85))
-	store.box(Vector3(64, 12.8, -11.95), Vector3(2.4, 1.7, 0.1), Mats.solid(Color(0.05, 0.05, 0.05), 0.5))
-	store.label("0", Vector3(64, 12.8, -11.86), 1.4, Color(1.0, 0.2, 0.15))
+	# the safety board, low on the wall where a gap in the racking shows it
+	var ink := Color(0.12, 0.14, 0.18)
+	store.box(Vector3(76.3, 6.0, -11.95), Vector3(11.4, 5.4, 0.12), Mats.solid(Color(0.95, 0.95, 0.92), 0.7))
+	store.box(Vector3(76.3, 8.1, -11.87), Vector3(11.4, 1.2, 0.06), Mats.solid(Color(0.12, 0.45, 0.25), 0.6))
+	store.label("SAFETY FIRST", Vector3(76.3, 8.1, -11.82), 0.8, Color(1, 1, 1))
+	store.label("THIS DEPARTMENT HAS WORKED", Vector3(76.3, 6.75, -11.86), 0.58, ink)
+	store.box(Vector3(76.3, 5.15, -11.87), Vector3(2.2, 1.7, 0.06), Mats.solid(Color(0.05, 0.05, 0.05), 0.5))
+	store.label("0", Vector3(76.3, 5.15, -11.8), 1.4, Color(1.0, 0.2, 0.15))
+	store.label("DAYS WITHOUT AN ACCIDENT", Vector3(76.3, 3.8, -11.86), 0.58, ink)
 	# Saul's glue trap
 	store.box(Vector3(55.6, 0.06, -1.6), Vector3(2.8, 0.1, 2.2), Mats.solid(Color(0.8, 0.72, 0.5), 0.9))
 	store.box(Vector3(55.6, 0.12, -1.6), Vector3(2.5, 0.04, 1.9), Mats.solid(Color(0.85, 0.7, 0.2), 0.12))
@@ -655,6 +660,10 @@ func _on_respawn() -> void:
 		t.bar.rotation.z = 2.75
 	if Game.flag("a2_tote") and not Game.flag("a2_stopped"):
 		tote.position.x = TOTE_BELT_X
+
+
+func _companion_ok() -> bool:
+	return not baler_on
 
 
 func _cam_zone() -> float:
