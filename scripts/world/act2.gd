@@ -16,13 +16,14 @@ const SHOTS := {
 }
 const CHECKPOINTS := {
 	"start": Vector3(0.0, 0.0, 0), "stock": Vector3(53.0, 0.0, 0), "pallet": Vector3(86.0, 0.9, 0),
-	"receiving": Vector3(119.5, 0.0, 0), "baler": Vector3(128.6, 0.0, 0), "flaps": Vector3(161.5, 6.0, 0),
+	"receiving": Vector3(120.7, 0.0, 0), "baler": Vector3(128.6, 0.0, 0), "flaps": Vector3(161.5, 6.0, 0),
 }
 const BELT_Y := 4.4
+const Kit = preload("res://scripts/ui/ui_kit.gd")
 const TOTE_HOME := Vector3(125.0, 0.0, -1.5)
 const TOTE_BELT_X := 137.5
-const TOTE_FAIL_X := 150.6
-const TOTE_SPEED := 0.5
+const TOTE_FAIL_X := 148.2     ## the tote's front edge reaches the big ram
+const TOTE_SPEED := 0.42
 
 var doug: Node3D
 var tyler: Node3D
@@ -39,7 +40,7 @@ var _recv_light: OmniLight3D
 var _vista_light: OmniLight3D
 var _button: Node3D
 var _strips: Array[Node3D] = []
-var _corn_griped := false
+var _note_font: Font
 
 
 func _setup() -> void:
@@ -58,7 +59,7 @@ func _setup() -> void:
 func _environment() -> void:
 	super()
 	env.ambient_light_color = Color(0.6, 0.6, 0.64)
-	env.ambient_light_energy = 0.6
+	env.ambient_light_energy = 0.7
 	env.background_color = Color(0.03, 0.03, 0.035)
 	env.fog_light_color = Color(0.07, 0.07, 0.07)
 	sun.light_color = Color(1.0, 0.95, 0.86)
@@ -66,6 +67,7 @@ func _environment() -> void:
 
 
 func _build_world() -> void:
+	_note_font = Kit.body_font(800)
 	_build_shell()
 	_build_breakroom()
 	_build_stockroom()
@@ -91,13 +93,15 @@ func _build_shell() -> void:
 	# breakroom: the same tile as out front, a little warmer
 	var tile := _floor_mat(Color(1.0, 0.95, 0.86))
 	var p := MeshInstance3D.new()
-	p.mesh = Meshes.box(Vector3(66, 0.4, 44))
+	p.mesh = Meshes.box(Vector3(66.6, 0.4, 44))
 	p.material_override = tile
-	p.position = Vector3(17, -0.2, -6)
+	p.position = Vector3(17.3, -0.2, -6)
 	add_child(p)
 	# the Back: sealed concrete with a yellow walkway line
+	# (one slab and one wall per room: a mesh is drawn again for every light that reaches it)
 	var conc := Mats.solid(Color(0.4, 0.4, 0.42), 0.82)
-	store.box(Vector3(115, -0.2, -6), Vector3(130, 0.4, 44), conc)
+	store.box(Vector3(85.3, -0.2, -6), Vector3(69.4, 0.4, 44), conc)
+	store.box(Vector3(151.0, -0.2, -6), Vector3(62.0, 0.4, 44), conc)
 	store.box(Vector3(112, 0.012, 2.3), Vector3(122, 0.02, 0.35), Mats.solid(Color(0.95, 0.78, 0.1), 0.7))
 	for jx in [66.0, 82.0, 98.0, 114.0, 130.0, 146.0, 162.0]:
 		store.box(Vector3(jx, 0.012, -6), Vector3(0.12, 0.02, 44), Mats.solid(Color(0.3, 0.3, 0.32), 0.9))
@@ -111,7 +115,8 @@ func _build_shell() -> void:
 	var blocks := Mats.textured(FaceTex.blocks(), 0.85, Vector3(0.06, 0.06, 0.06))
 	blocks.uv1_triplanar = true
 	blocks.uv1_world_triplanar = true
-	store.box(Vector3(107.5, 20, -12.4), Vector3(113, 40, 0.8), blocks)
+	store.box(Vector3(85.5, 20, -12.4), Vector3(69, 40, 0.8), blocks)
+	store.box(Vector3(142.0, 20, -12.4), Vector3(44, 40, 0.8), blocks)
 	# the pillars between rooms (seen edge-on)
 	for px in [50.6, 118.0]:
 		store.box(Vector3(px, 20, -8.2), Vector3(1.4, 40, 9.0), blocks)
@@ -133,7 +138,7 @@ func _build_shell() -> void:
 
 func _build_breakroom() -> void:
 	store.section = "break"
-	store.omni(Vector3(12, 22, 4), Color(1.0, 0.95, 0.84), 2.0, 46.0)
+	store.omni(Vector3(10, 22, 4), Color(1.0, 0.95, 0.84), 2.1, 40.0)
 	# the table Doug eats at, and his chair
 	var lam := Mats.solid(Color(0.85, 0.85, 0.8), 0.4)
 	var leg := Mats.solid(Color(0.3, 0.3, 0.32), 0.4, 0.6)
@@ -174,7 +179,7 @@ func _build_sheet() -> void:
 		["OLIVE OIL, X-VIRGIN ... BTM SHELF", 3.1, 0.25, ink], ["EGGS, LG, GRADE A, 12 CT", 2.4, 0.25, ink],
 		["DELETE", 1.55, 0.62, Color(0.85, 0.1, 0.08)], ["REPLACE W/ EGG-STYLE LIQUID 16 OZ", 0.8, 0.2, ink]]
 	for r in rows:
-		var t: Label3D = store.label(r[0], Vector3.ZERO, r[2], r[3], 0, Color.BLACK, false, store.font_ui if r[2] < 0.4 else null)
+		var t: Label3D = store.label(r[0], Vector3.ZERO, r[2], r[3], 0, Color.BLACK, false, _note_font if r[2] < 0.4 else null)
 		t.reparent(n, false)
 		t.position = Vector3(0, r[1], 0.03)
 	var ring := store.mesh(Meshes.torus(0.62, 0.74, 24, 6), Mats.solid(Color(0.45, 0.3, 0.15, 1.0), 0.9), Vector3(1.7, 1.5, 0.025), Vector3(PI * 0.5, 0, 0), n)
@@ -242,7 +247,7 @@ func _build_fridge() -> void:
 	store.box(Vector3(39.0, 4.9, -8.65), Vector3(5.7, 7.6, 0.1), inner)
 	store.box(Vector3(39.0, 5.3, -6.0), Vector3(5.7, 0.14, 5.4), Mats.glass(Color(0.85, 0.95, 1.0, 0.3)))
 	store.box(Vector3(39.0, 8.85, -4.0), Vector3(4.6, 0.12, 0.5), Mats.glow(Color(0.85, 0.95, 1.0), 2.6))
-	store.omni(Vector3(39.0, 6.0, -3.2), Color(0.75, 0.9, 1.0), 1.8, 11.0)
+	store.omni(Vector3(39.0, 6.0, -3.2), Color(0.75, 0.9, 1.0), 1.8, 9.0)
 	store.product("jar", Vector3(37.2, 5.4, -6.4), Color(0.7, 0.2, 0.15), Color(0.85, 0.75, 0.3))
 	store.product("carton", Vector3(39.4, 5.4, -6.8), Color(0.97, 0.97, 0.95), Color(0.3, 0.7, 0.35))
 	store.product("jar", Vector3(41.0, 5.4, -6.2), Color(0.5, 0.6, 0.2), Color(0.8, 0.2, 0.2))
@@ -250,10 +255,10 @@ func _build_fridge() -> void:
 	# the door, swung all the way open against the cabinets
 	store.box(Vector3(45.2, 4.9, -2.1), Vector3(6.0, 9.0, 0.4), white, 0.1)
 	store.box(Vector3(45.2, 6.6, -1.86), Vector3(2.6, 2.6, 0.03), Mats.solid(Color(1.0, 0.95, 0.6), 0.8))
-	var note: Label3D = store.label("YOUR MOTHER\nDOESN'T WORK HERE.\n(she works at\nthe other location)\n- DOUG", Vector3(45.2, 6.6, -1.83), 0.27, Color(0.5, 0.1, 0.1), 0, Color.BLACK, false, store.font_ui)
+	var note: Label3D = store.label("YOUR MOTHER\nDOESN'T WORK HERE.\n(she works at\nthe other location)\n- DOUG", Vector3(45.2, 6.6, -1.83), 0.27, Color(0.45, 0.06, 0.06), 0, Color.BLACK, false, _note_font)
 	note.outline_size = 0
 	store.box(Vector3(39.0, 2.75, -2.6), Vector3(2.2, 0.7, 0.03), Mats.solid(Color(0.98, 0.98, 0.95), 0.8))
-	var kl: Label3D = store.label("KAREN'S!! DO NOT EAT", Vector3(39.0, 2.75, -2.57), 0.2, Color(0.5, 0.02, 0.25), 0, Color.BLACK, false, store.font_ui)
+	var kl: Label3D = store.label("KAREN'S!! DO NOT EAT", Vector3(39.0, 2.75, -2.57), 0.2, Color(0.5, 0.02, 0.25), 0, Color.BLACK, false, _note_font)
 	kl.outline_size = 0
 
 
@@ -261,8 +266,8 @@ func _build_fridge() -> void:
 
 func _build_stockroom() -> void:
 	store.section = "stock"
-	store.omni(Vector3(68, 20, 5), Color(1.0, 0.9, 0.72), 1.9, 44.0)
-	store.omni(Vector3(100, 20, 5), Color(1.0, 0.9, 0.72), 1.9, 44.0)
+	# one lamp for the room, kept short of the rooms either side
+	store.omni(Vector3(85, 18, 6), Color(1.0, 0.9, 0.72), 2.5, 34.0)
 	var card := [Color(0.68, 0.52, 0.33), Color(0.62, 0.47, 0.3), Color(0.72, 0.56, 0.36)]
 	var upright := Mats.solid(Color(0.15, 0.3, 0.6), 0.5, 0.3)
 	var beam := Mats.solid(Color(0.92, 0.45, 0.1), 0.5, 0.3)
@@ -295,7 +300,7 @@ func _build_stockroom() -> void:
 	store.box(Vector3(55.6, 0.12, -1.6), Vector3(2.5, 0.04, 1.9), Mats.solid(Color(0.85, 0.7, 0.2), 0.12))
 	store.mesh(Meshes.sphere(0.22, 8, 6), Mats.solid(Color(0.2, 0.1, 0.14), 0.7), Vector3(56.6, 0.24, -1.0)).scale = Vector3(1.1, 0.7, 0.9)
 	# the mousetraps
-	for tx in [60.0, 66.0, 72.0, 75.0]:
+	for tx in [60.0, 66.0, 72.0, 77.0]:
 		_trap(tx)
 	# Pallet Nine
 	for k in 3:
@@ -325,6 +330,14 @@ func _build_stockroom() -> void:
 		s.position = Vector3(114.7 + k * 0.2, 0.45 + k * 0.78, -0.4)
 		add_child(s)
 	store.solid_lane(112.5, 116.9, 0.0, 1.6, {"cushion": true})
+	# one more on the floor, for anyone who leaps off the end of the line
+	var s3 := MeshInstance3D.new()
+	s3.mesh = Meshes.rounded_box(Vector3(3.1, 0.9, 2.9), 0.4, 3)
+	s3.material_override = sack
+	s3.position = Vector3(118.4, 0.42, -0.3)
+	s3.rotation.y = 0.08
+	add_child(s3)
+	store.solid_lane(116.9, 119.9, 0.0, 0.8, {"cushion": true})
 	var fl: Label3D = store.label("FLOUR", Vector3(114.9, 1.2, 1.12), 0.42, Color(0.3, 0.35, 0.6))
 	fl.outline_size = 0
 
@@ -390,8 +403,9 @@ func _set_belt(b: Dictionary, on: bool) -> void:
 
 func _build_receiving() -> void:
 	store.section = "recv"
-	_recv_light = store.omni(Vector3(142, 22, 6), Color(1.0, 0.92, 0.78), 2.1, 52.0)
-	_alarm = store.omni(Vector3(158, 12, 4), Color(1.0, 0.12, 0.08), 0.0, 40.0)
+	_recv_light = store.omni(Vector3(146, 20, 6), Color(1.0, 0.92, 0.78), 2.3, 40.0)
+	_alarm = store.omni(Vector3(158, 12, 4), Color(1.0, 0.12, 0.08), 2.6, 34.0)
+	_alarm.visible = false
 	var card := Mats.solid(Color(0.66, 0.5, 0.32), 0.9)
 	var green := Mats.solid(Color(0.16, 0.4, 0.24), 0.5, 0.3)
 	var steel := Mats.solid(Color(0.6, 0.62, 0.66), 0.35, 0.7)
@@ -419,11 +433,13 @@ func _build_receiving() -> void:
 	store.box(Vector3(153.0, 12.6, -3.36), Vector3(8.0, 1.5, 0.06), hazard)
 	var dl: Label3D = store.label("DANGER  ·  CRUSH HAZARD", Vector3(153.0, 12.6, -3.3), 0.6, Color(0.08, 0.08, 0.08))
 	dl.outline_size = 0
-	_ram(142.6, 145.0, 2.0, 0.45, 0.0)
-	_ram(151.6, 155.2, 3.0, 0.9, 1.1)
+	# a narrow tamper over the front of the belt (the tote rides past behind it),
+	# then the big ram across the whole belt
+	_ram(142.6, 145.0, 2.0, 0.45, 0.0, 0.3, 1.5)
+	_ram(151.6, 155.2, 3.0, 0.9, 1.1, -1.0, 3.6)
 	# finished bales
 	for k in 3:
-		var bale := store.box(Vector3(176.4 + (k % 2) * 4.4, 2.0 + (k / 2) * 4.1, -1.6), Vector3(4.2, 4.0, 4.2), card, 0.2)
+		var bale := store.box(Vector3(178.7 + (k % 2) * 4.4, 2.0 + (k / 2) * 4.1, -1.6), Vector3(4.2, 4.0, 4.2), card, 0.2)
 		for sy in [-1.0, 1.0]:
 			store.box(bale.position + Vector3(0, sy, 0), Vector3(4.26, 0.12, 4.26), Mats.solid(Color(0.2, 0.2, 0.22), 0.5))
 	# the E-stop post at the end of the belt
@@ -444,7 +460,18 @@ func _build_receiving() -> void:
 	for k in 2:
 		var top := 3.7 - k * 1.85
 		store.box(Vector3(163.8 + k * 1.6, top * 0.5, -0.6), Vector3(1.6, top, 3.2), card, 0.08)
-		store.solid_lane(163.0 + k * 1.6, 164.6 + k * 1.6, 0.0, top)
+		store.solid_lane(163.0 + k * 1.6, 164.6 + k * 1.6, 0.0, top, {"cushion": true})
+	# ...and a heap of loose cardboard past them, so a leap off the button ends softly
+	var heap := MeshInstance3D.new()
+	heap.mesh = Meshes.rounded_box(Vector3(4.3, 0.95, 3.2), 0.42, 3)
+	heap.material_override = card
+	heap.position = Vector3(168.3, 0.26, -0.5)
+	add_child(heap)
+	for k in 6:
+		var sheet := store.box(Vector3(166.9 + k * 0.56, 0.74 + (k % 2) * 0.05, -0.5 + (k % 3 - 1) * 0.7),
+			Vector3(1.5, 0.05, 1.1), Mats.solid(Color(0.7, 0.54, 0.35) if k % 2 == 0 else Color(0.6, 0.45, 0.28), 0.9))
+		sheet.rotation = Vector3(_rng.randf_range(-0.12, 0.12), _rng.randf_range(-0.6, 0.6), _rng.randf_range(-0.14, 0.14))
+	store.solid_lane(166.2, 170.4, 0.0, 0.7, {"cushion": true})
 	# the Flaps: a doorway in the back wall, hung with plastic strips
 	var blocks := Mats.solid(Color(0.36, 0.37, 0.4), 0.85)
 	store.box(Vector3(165.3, 20, -4.3), Vector3(6.0, 40, 0.6), blocks)
@@ -455,8 +482,13 @@ func _build_receiving() -> void:
 		var piv := Node3D.new()
 		piv.position = Vector3(168.7 + k * 0.78, 16.0, -4.1)
 		add_child(piv)
-		store.mesh(Meshes.box(Vector3(0.74, 15.8, 0.05)), Mats.glass(Color(0.85, 0.95, 0.7, 0.3), 0.15), Vector3(0, -7.9, 0), Vector3.ZERO, piv)
+		store.mesh(Meshes.box(Vector3(0.74, 15.8, 0.05)), Mats.glass(Color(0.92, 0.95, 0.6, 0.5), 0.15), Vector3(0, -7.9, 0), Vector3.ZERO, piv)
 		_strips.append(piv)
+	# keep-clear markings on the floor in front of them
+	for mz in [-1.3, -2.2, -3.1]:
+		store.box(Vector3(171.4, 0.014, mz), Vector3(6.2, 0.02, 0.3), hazard)
+	for mx in [168.3, 174.5]:
+		store.box(Vector3(mx, 0.014, -2.2), Vector3(0.3, 0.02, 2.1), hazard)
 	store.label("TO SALES FLOOR", Vector3(171.4, 18.2, -3.9), 0.8, Color(0.95, 0.95, 0.9))
 	# the Discontinued tote
 	tote = Node3D.new()
@@ -476,7 +508,7 @@ func _build_receiving() -> void:
 
 
 ## A press head over the belt that slams down on a cycle.
-func _ram(x0: float, x1: float, period: float, hold: float, offset: float) -> void:
+func _ram(x0: float, x1: float, period: float, hold: float, offset: float, zc: float, depth: float) -> void:
 	var cx := (x0 + x1) * 0.5
 	var w := x1 - x0
 	var steel := Mats.solid(Color(0.6, 0.62, 0.66), 0.35, 0.7)
@@ -485,10 +517,10 @@ func _ram(x0: float, x1: float, period: float, hold: float, offset: float) -> vo
 		store.box(Vector3(px, BELT_Y + 5.0, -3.3), Vector3(0.6, 10.0, 0.6), frame)
 	store.box(Vector3(cx, BELT_Y + 10.0, -1.4), Vector3(w + 1.8, 1.0, 4.6), frame)
 	var n := Node3D.new()
-	n.position = Vector3(cx, BELT_Y + 5.0, -1.0)
+	n.position = Vector3(cx, BELT_Y + 5.0, zc)
 	add_child(n)
-	store.mesh(Meshes.rounded_box(Vector3(w, 3.2, 3.6), 0.12, 2), steel, Vector3(0, 1.6, 0), Vector3.ZERO, n)
-	store.mesh(Meshes.box(Vector3(w + 0.04, 0.5, 3.64)), Mats.solid(Color(0.95, 0.78, 0.1), 0.6), Vector3(0, 0.3, 0), Vector3.ZERO, n)
+	store.mesh(Meshes.rounded_box(Vector3(w, 3.2, depth), 0.12, 2), steel, Vector3(0, 1.6, 0), Vector3.ZERO, n)
+	store.mesh(Meshes.box(Vector3(w + 0.04, 0.5, depth + 0.04)), Mats.solid(Color(0.95, 0.78, 0.1), 0.6), Vector3(0, 0.3, 0), Vector3.ZERO, n)
 	store.mesh(Meshes.cyl(0.5, 0.5, 9.0, 12), Mats.solid(Color(0.8, 0.82, 0.86), 0.15, 0.9), Vector3(0, 7.6, 0), Vector3.ZERO, n)
 	var lamp_m: StandardMaterial3D = Mats.glow(Color(1.0, 0.3, 0.1), 3.0).duplicate()
 	var lamp := store.mesh(Meshes.sphere(0.4, 10, 6), lamp_m, Vector3(cx, BELT_Y + 9.0, 1.0))
@@ -576,19 +608,20 @@ func _spawn_cast() -> void:
 # --- triggers and state ---------------------------------------------------------------------
 
 func _build_triggers() -> void:
-	_trigger("planogram", Rect2(8.6, -0.5, 4.0, 2.0), func(): runner.run("a2_planogram"),
+	# (each zone is wider than a full jump, so nobody sails over the story)
+	_trigger("planogram", Rect2(8.6, -0.5, 8.6, 2.0), func(): runner.run("a2_planogram"),
 		func(): return not Game.flag("a2_planogram"))
-	_trigger("saul", Rect2(51.6, -0.5, 2.6, 2.0), func(): runner.run("a2_saul"),
+	_trigger("saul", Rect2(51.6, -0.5, 6.0, 2.0), func(): runner.run("a2_saul"),
 		func(): return not Game.flag("a2_saul"))
-	_trigger("kernel", Rect2(80.6, 0.7, 4.6, 1.0), func(): runner.run("a2_kernel"),
+	_trigger("kernel", Rect2(80.3, 0.7, 8.9, 1.0), func(): runner.run("a2_kernel"),
 		func(): return not Game.flag("a2_kernel"))
-	_trigger("cp_recv", Rect2(117.0, -0.5, 3.4, 3.0), func(): _checkpoint("receiving"),
+	_trigger("cp_recv", Rect2(117.0, -0.5, 11.0, 3.0), func(): _checkpoint("receiving"),
 		func(): return Game.checkpoint in ["start", "stock", "pallet"])
-	_trigger("disc", Rect2(119.2, -0.5, 2.6, 2.0), func(): runner.run("a2_discontinued"),
+	_trigger("disc", Rect2(119.2, -0.5, 9.4, 2.0), func(): runner.run("a2_discontinued"),
 		func(): return not Game.flag("a2_tote"))
-	_trigger("stop", Rect2(160.2, 5.4, 2.6, 1.2), func(): runner.run("a2_stop"),
+	_trigger("stop", Rect2(160.0, 5.4, 3.0, 1.2), func(): runner.run("a2_stop"),
 		func(): return Game.flag("a2_tote") and not Game.flag("a2_stopped"))
-	_trigger("ending", Rect2(167.4, -0.5, 5.0, 3.0), func(): runner.run("a2_ending"),
+	_trigger("ending", Rect2(167.4, -0.5, 8.4, 3.0), func(): runner.run("a2_ending"),
 		func(): return Game.flag("a2_stopped"))
 
 
@@ -752,8 +785,8 @@ func _ev_baler_go() -> void:
 
 
 func _stopped_look() -> void:
-	_alarm.light_energy = 2.6
-	_recv_light.light_energy = 1.1
+	_alarm.visible = true
+	_recv_light.light_energy = 1.2
 	(_button.get_node("Cap") as Node3D).position.y = -0.1
 	for r in rams:
 		r.node.position.y = BELT_Y + 5.0
@@ -836,15 +869,20 @@ func _ev_end_act() -> void:
 # --- per frame -------------------------------------------------------------------------------------
 
 func _tick(dt: float) -> void:
+	# belts hold still while a conversation or a scrap has the player's hands tied
 	for b in belts:
-		if not b.on:
+		var v: float = b.speed if b.on and not Game.busy else 0.0
+		var body: StaticBody3D = b.body
+		if body.constant_linear_velocity.x != v:
+			body.constant_linear_velocity = Vector3(v, 0, 0)
+		if v == 0.0:
 			continue
 		var span: float = b.x1 - b.x0
 		for s in b.stripes:
-			s.position.x = b.x0 + fposmod(s.position.x - b.x0 + b.speed * dt, span)
-	var b0: Dictionary = belts[0]
-	for r in riders:
-		r.position.x = b0.x0 + 1.0 + fposmod(r.position.x - b0.x0 - 1.0 + b0.speed * dt, b0.x1 - b0.x0 - 2.0)
+			s.position.x = b.x0 + fposmod(s.position.x - b.x0 + v * dt, span)
+		if b == belts[0]:
+			for r in riders:
+				r.position.x = b.x0 + 1.0 + fposmod(r.position.x - b.x0 - 1.0 + v * dt, span - 2.0)
 	if not baler_on:
 		return
 	for r in rams:
@@ -861,7 +899,8 @@ func _tick(dt: float) -> void:
 			player.die("late")
 
 
-## up -> (lamp flashes) -> slam -> hold -> rise
+## up -> (lamp flashes) -> slam -> hold -> rise. It kills for as long as the
+## head is low enough to touch an egg.
 func _ram_tick(r: Dictionary) -> void:
 	var p := fposmod(_t + r.offset, r.period)
 	var drop := 0.1
@@ -870,23 +909,24 @@ func _ram_tick(r: Dictionary) -> void:
 	var up := BELT_Y + 5.0
 	var low := BELT_Y + 0.06
 	var y := up
-	var was: bool = r.down
+	var lamp := 0.2
 	if p < wait:
-		r.down = false
-		r.lamp.emission_energy_multiplier = 3.0 if p > wait - 0.55 and fmod(p, 0.16) < 0.08 else 0.2
+		if p > wait - 0.55 and fmod(p, 0.16) < 0.08:
+			lamp = 3.0
 	elif p < wait + drop:
 		y = lerpf(up, low, (p - wait) / drop)
-		r.down = true
+		lamp = 3.0
 	elif p < wait + drop + r.hold:
 		y = low
-		r.down = true
+		lamp = 3.0
 	else:
 		y = lerpf(low, up, ease((p - wait - drop - r.hold) / rise, -2.0))
-		r.down = false
 	r.node.position.y = y
+	r.lamp.emission_energy_multiplier = lamp
+	var was: bool = r.down
+	r.down = y < BELT_Y + 1.9
 	if r.down and not was:
-		var pos: Vector3 = r.node.global_position
-		get_tree().create_timer(drop).timeout.connect(func():
-			Sfx.play_at("slam", pos, 0.0, 1.0 if r.hold > 0.6 else 1.25)
-			if absf(player.global_position.x - pos.x) < 16.0:
-				shake(0.45 if r.hold > 0.6 else 0.25))
+		var big: bool = r.hold > 0.6
+		Sfx.play_at("slam", r.node.global_position, 0.0, 1.0 if big else 1.25)
+		if absf(player.global_position.x - r.node.global_position.x) < 16.0:
+			shake(0.45 if big else 0.25)

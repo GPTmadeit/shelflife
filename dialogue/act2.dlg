@@ -181,6 +181,7 @@ SAUL [angry]: It gets LONELY back here, donut!
 -> END
 
 === a2_kernel
+~ walk baker 82.4
 ~ cam kernel baker
 KERNEL [angry]: HALT! Who goes there? State your category!
 BAKER [shock]: Uh. Dairy? Eggs. Refrigerated.
@@ -245,7 +246,7 @@ CORN: HOORAH.
 # --- receiving ----------------------------------------------------------------
 
 === a2_discontinued
-~ walk baker 120.6
+~ walk baker 120.9
 ~ cam fizz hollow zero baker
 FIZZ [excited]: Customers! Hollow, wake up, we got customers!
 HOLLOW [tired]: They're not customers, Fizz. It's an egg and a donut.

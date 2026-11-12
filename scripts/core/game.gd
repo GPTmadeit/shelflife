@@ -97,12 +97,9 @@ func replay_act(n: int) -> void:
 	for k in flags.keys():
 		if (n == 1 and not k.begins_with("a2_") and not k.ends_with("_done")) or (n == 2 and k.begins_with("a2_")):
 			flags.erase(k)
-	if n == 1:
-		visited = {}
-	else:
-		for k in visited.keys():
-			if k.begins_with("a2_"):
-				visited.erase(k)
+	for k in visited.keys():
+		if k.begins_with("a2_") == (n == 2):
+			visited.erase(k)
 	start_act(n)
 
 

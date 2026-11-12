@@ -512,6 +512,8 @@ func _finish_act(big: String, small: String, next_act: int, teaser: String) -> v
 # --- crack / death / respawn -------------------------------------------------------------------------
 
 func _on_crack(n: int) -> void:
+	if Game.dev.has("trace"):
+		print("CRACK %d at (%.1f, %.1f)" % [n, player.global_position.x, player.global_position.y])
 	hud.shell(n)
 	shake(0.6)
 	if n == 1 and not Game.visited.has("first_crack") and n < Player.MAX_CRACKS and runner.has("first_crack"):
@@ -643,7 +645,8 @@ func _update_prompt() -> void:
 	if Game.busy or not player.alive or player.locked:
 		hud.prompt_hide()
 		return
-	var best := 2.8
+	var best := 1.0
+	var companion: Node3D = null
 	for id in actors.keys():
 		var a: Node = actors[id]
 		if a == player or not (a is Node3D) or not a.visible:
@@ -653,9 +656,16 @@ func _update_prompt() -> void:
 			continue
 		var d: float = Vector2(a.global_position.x - player.global_position.x, (a.global_position.y - player.global_position.y) * 1.5).length()
 		var reach: float = a.get("talk_radius") if a.get("talk_radius") != null else 2.6
-		if d < reach and d < best:
-			best = d
+		if d >= reach:
+			continue
+		# Dot tags along everywhere: anyone else in reach gets the button first
+		if dot_follow and id == "dot":
+			companion = a
+		elif d / reach < best:
+			best = d / reach
 			_interact_target = a
+	if _interact_target == null:
+		_interact_target = companion
 	if _interact_target == null:
 		hud.prompt_hide()
 		return
