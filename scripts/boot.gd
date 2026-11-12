@@ -4,7 +4,9 @@ extends Node
 ##
 ##   --shot <png> <seconds>   save a screenshot after <seconds> and quit
 ##   --burst <n> <step>       also save n frames, step seconds apart, before it
-##   --cp <checkpoint>        start Act One at a checkpoint (skips the title)
+##   --cp <checkpoint>        start at a checkpoint (skips the title)
+##   --at <x,y>               put Baker here instead of at the checkpoint
+##   --level <n>              which act --cp means (default 1)
 ##   --flags a,b,c            story flags to set first
 ##   --dlg <node>             start a dialogue node right away (needs --cp)
 ##   --act a@t0-t1,...        hold input actions between times (seconds)
@@ -34,6 +36,9 @@ func _ready() -> void:
 		for f in Game.dev.get("flags", []):
 			Game.set_flag(f)
 		Game.checkpoint = Game.dev.cp
+		Game.act = int(Game.dev.get("level", 1))
+		if Game.act >= 2:
+			Game.set_flag("dot_joined")
 		Game.start_level(Game.dev.cp)
 	else:
 		Game.go_title()
@@ -67,6 +72,13 @@ func _parse(args: PackedStringArray) -> Dictionary:
 				i += 1
 			"--quit":
 				d.quit = float(args[i + 1])
+				i += 1
+			"--at":
+				var xy := args[i + 1].split(",")
+				d.at = Vector3(float(xy[0]), float(xy[1]) if xy.size() > 1 else 0.0, 0.0)
+				i += 1
+			"--level":
+				d.level = int(args[i + 1])
 				i += 1
 			"--quality":
 				d.quality = int(args[i + 1])

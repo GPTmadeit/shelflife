@@ -142,19 +142,31 @@ func _build_ui() -> void:
 	var price := Kit.label("  $13.00", 36, Color(0.12, 0.08, 0.06), Kit.title_font())
 	bar.add_child(price)
 	tv.add_child(bar)
-	var sub := Kit.label("ACT ONE: UNPLANNED", 34, Color(1.0, 0.92, 0.75), Kit.title_font(), 10)
+	var save := Game.peek_save()
+	var unlocked: bool = save.get("flags", {}).get("act1_done", false) == true
+	var sub := Kit.label("AN R-RATED GROCERY COMEDY", 34, Color(1.0, 0.92, 0.75), Kit.title_font(), 10)
 	sub.position = Vector2(130, 330)
 	_ui.add_child(sub)
 	_menu = VBoxContainer.new()
 	_menu.add_theme_constant_override("separation", 8)
-	_menu.position = Vector2(120, 400)
+	_menu.position = Vector2(120, 392)
 	_menu.custom_minimum_size = Vector2(430, 0)
 	_ui.add_child(_menu)
-	if Game.has_save():
-		_first = _btn("Continue", Game.continue_game)
-	var ng := _btn("New Game", Game.new_game)
+	if not save.is_empty():
+		var a := clampi(int(save.get("act", 1)), 1, Game.ACTS.size())
+		_first = _btn("Continue  ·  %s" % Game.ACTS[a].get_slice(":", 0), Game.continue_game, true)
+	var ng := _btn("New Game", Game.new_game, true)
 	if _first == null:
 		_first = ng
+	if unlocked:
+		# replay an act from its start: two half-width buttons on one row
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		_menu.add_child(row)
+		for n in Game.ACTS.keys():
+			var b := _btn("Replay %s" % Game.ACTS[n].get_slice(":", 0), Game.replay_act.bind(n), true, 25)
+			b.reparent(row)
+			b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_btn("Settings", _open_settings)
 	_upd_btn = _btn("Update", _on_update)
 	_upd_btn.visible = false
@@ -220,11 +232,11 @@ func _corner(c: Control, top: float, bottom: float) -> void:
 	c.mouse_filter = Control.MOUSE_FILTER_IGNORE if c is Label else Control.MOUSE_FILTER_PASS
 
 
-func _btn(text: String, fn: Callable) -> Button:
-	var b := Kit.button(text, 36)
+func _btn(text: String, fn: Callable, starts_game := false, size := 36) -> Button:
+	var b := Kit.button(text, size)
 	b.pressed.connect(func():
 		Sfx.play("ui_ok", -6.0)
-		if text in ["Continue", "New Game"]:
+		if starts_game:
 			Sfx.music_stop(0.8)
 			Sfx.stop_all_ambience(0.5)
 		fn.call())
@@ -252,7 +264,7 @@ func _on_update() -> void:
 func _upd_refresh() -> void:
 	var s: int = Updater.state
 	var busy := s == Updater.DOWNLOADING or s == Updater.INSTALLING or s == Updater.RESTARTING
-	for b in _menu.get_children():
+	for b in _menu.find_children("*", "Button", true, false):
 		if b != _upd_btn:
 			(b as Button).disabled = busy
 	var show := s == Updater.AVAILABLE or busy or (s == Updater.FAILED and Updater.install_failed)

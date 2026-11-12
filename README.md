@@ -39,9 +39,19 @@ The update check is a single request to github.com when the game starts, and it 
 
 ## Status
 
-**Act One: Unplanned** is playable start to finish (about 20 minutes): the
-dairy case, the main aisle and the Narc, the bakery, and the Employees Only
-doors. Act Two is not written yet.
+Two acts are playable start to finish, about 35 minutes together.
+
+- **Act One: Unplanned.** The dairy case, the main aisle and the Narc, the
+  bakery, and the Employees Only doors.
+- **Act Two: Discontinued.** The Back: the breakroom floor, the stockroom and
+  its mousetraps, Pallet Nine, and Receiving, where the Baler eats whatever
+  isn't on the Planogram.
+
+Act Three is not written yet.
+
+| | |
+|---|---|
+| ![Colonel Kernel and Pallet Nine](docs/screenshots/pallet-nine.jpg) | ![The Discontinued](docs/screenshots/discontinued.jpg) |
 
 ## Play
 
@@ -62,6 +72,9 @@ Eggs crack. A short drop is fine; jump off anything tall and you'll crack your
 shell. Three cracks and you're done. Bread and other soft things are safe to
 land on.
 
+The pause menu keeps every Planogram scrap you've found, to read again. Once
+you finish Act One, the title screen can replay either act from its start.
+
 Graphics quality (Settings) defaults to Low on older Intel integrated GPUs.
 
 ## How it's made
@@ -74,8 +87,9 @@ files ship with the game except two fonts.
 
 | Path | What |
 |---|---|
-| `dialogue/act1.dlg` | the whole Act One script (format in `scripts/dialogue/dlg_parser.gd`) |
-| `scripts/world/act1.gd` | the level: layout, cast, triggers, cutscene events |
+| `dialogue/act1.dlg`, `act2.dlg` | the script of each act (format in `scripts/dialogue/dlg_parser.gd`) |
+| `scripts/world/level.gd` | what the acts share: player, camera, triggers, hazards, scraps, respawn |
+| `scripts/world/act1.gd`, `act2.gd` | each act's level: layout, cast, triggers, cutscene events |
 | `scripts/actors/` | Baker (`player.gd`), the food characters (`food_rig.gd`), the Narc, the humans |
 | `scripts/ui/` | dialogue box, HUD, title, pause and settings |
 
@@ -86,10 +100,11 @@ godot --headless --path . --script tests/check.gd   # scripts compile, dialogue 
 tests/shot.sh out.png 8 --cp narc --flags intro_done,sermon_done   # screenshot (Hyprland, hidden workspace)
 ```
 
-Flags after `--`: `--cp <checkpoint>`, `--flags a,b`, `--dlg <node>`, `--auto`
+Flags after `--`: `--level <act>`, `--cp <checkpoint>`, `--at <x,y>`, `--flags a,b`, `--dlg <node>`, `--auto`
 (reads dialogue by itself), `--bot` (walks right and hops), `--godmode`,
 `--quality 0|1|2`, `--act action@t0-t1,...`, `--shot <png> <s>`, `--burst <n> <step>`, `--trace`,
-`--end-quit` (quit when the act ends). The updater has its own test flags (see `scripts/core/updater.gd`).
+`--end-quit` (quit when the act ends). A whole act plays itself with
+`--level 2 --cp start --auto --bot --godmode --end-quit`. The updater has its own test flags (see `scripts/core/updater.gd`).
 
 ### Releasing
 
@@ -101,7 +116,7 @@ gh workflow run release.yml --ref main   # or push a v0.2.0 tag
 ```
 
 The [release workflow](.github/workflows/release.yml) checks the scripts and dialogue, then exports Linux
-and Windows builds with `tools/package.sh`. The exported game has to play all of Act One by itself. Then
+and Windows builds with `tools/package.sh`. The exported game has to play both acts by itself. Then
 `tools/update_test.sh` updates a fresh install from a fake 0.0.0 to the new build, on Linux and on Windows,
 for both the game-file update and the full engine update. Only then is the release published. Afterwards,
 the same update runs once more against the published release on GitHub.

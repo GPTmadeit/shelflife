@@ -90,6 +90,7 @@ func _physics_process(dt: float) -> void:
 		_buffer = 0.0
 		_coyote = 0.0
 		rig.hop_stretch()
+		_puff(3, 0.5)
 		Sfx.play("jump", -8.0, randf_range(0.95, 1.08))
 	if velocity.y > 0.0 and (locked or not (Input.is_action_pressed("jump") or _bot_hold > 0.0)):
 		velocity.y -= GRAVITY * dt * 1.3   # short hop when jump is released
@@ -144,6 +145,7 @@ func _on_land() -> void:
 	else:
 		rig.land(clampf(drop / 3.0, 0.25, 1.0))
 		if drop > 0.6:
+			_puff(4 + int(minf(drop, 3.0) * 2.0), 0.6 + drop * 0.25)
 			Sfx.play("land", -10.0 + drop * 2.0, randf_range(0.9, 1.1))
 
 
@@ -167,7 +169,7 @@ func die(reason: String) -> void:
 		return
 	alive = false
 	velocity = Vector3.ZERO
-	if reason in ["splat", "cracked"]:
+	if not reason in ["shrunk", "late"]:
 		_splat()
 		rig.visible = false
 	died.emit(reason)
@@ -187,6 +189,27 @@ func respawn(pos: Vector3, keep_cracks := 0) -> void:
 	rig.position = Vector3.ZERO
 	alive = true
 	_peak_y = pos.y
+
+
+## Little dust puffs kicked up from the feet.
+func _puff(n: int, spread: float) -> void:
+	if Game.quality() < 1 and n > 4:
+		n = 4
+	var mat := Mats.flat(Color(0.86, 0.86, 0.9, 0.5))
+	for i in n:
+		var m := MeshInstance3D.new()
+		m.mesh = Meshes.sphere(0.11, 8, 5)
+		m.material_override = mat
+		m.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		get_parent().add_child(m)
+		var side := -1.0 if i % 2 == 0 else 1.0
+		m.global_position = global_position + Vector3(side * randf_range(0.1, 0.3), 0.08, randf_range(-0.2, 0.3))
+		var to := m.global_position + Vector3(side * randf_range(0.3, 1.0) * spread, randf_range(0.15, 0.5), 0.0)
+		var tw := m.create_tween()
+		tw.tween_property(m, "global_position", to, 0.38).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+		tw.parallel().tween_property(m, "scale", Vector3.ONE * randf_range(1.6, 2.4), 0.2)
+		tw.tween_property(m, "scale", Vector3.ONE * 0.01, 0.18)
+		tw.tween_callback(m.queue_free)
 
 
 ## Shell shards fly, yolk puddles.

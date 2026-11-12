@@ -1,4 +1,4 @@
-**Shelf Life** is an R-rated comedy platformer set in a supermarket after closing. You play Baker, the thirteenth egg in a carton of twelve: no cup, no slot, and no place in the Planogram, the sacred shelf layout the food of Grocerama worships. The new Planogram arrives at dawn, and Baker has one night to cross the store and find out if there's room in it for a packing error.
+**Shelf Life** is an R-rated comedy platformer set in a supermarket after closing. You play Baker, the thirteenth egg in a carton of twelve: no cup, no slot, and no place in the Planogram, the sacred shelf layout the food of Grocerama worships. The new Planogram arrives at dawn, and Baker has one night to cross the store and find out if there's room in it for a packing error. Two acts are playable, about 35 minutes together.
 
 > **Content:** strong language, crude humor, religious satire and food in mortal peril.
 
@@ -26,7 +26,7 @@ Installed copies update themselves. When a new version is out, the title screen 
 | Talk / advance dialogue | E or Enter (Space advances too) | X / A |
 | Pause | Esc | Start |
 
-Eggs crack. A short drop is fine, but jump off anything tall and you'll crack your shell. Three cracks and you're done. Bread and other soft things are safe to land on.
+Eggs crack. A short drop is fine, but jump off anything tall and you'll crack your shell. Three cracks and you're done. Bread and other soft things are safe to land on. Once you finish Act One, the title screen can start either act.
 
 ### Changes in {{VERSION}}
 

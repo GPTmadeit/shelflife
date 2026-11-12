@@ -17,31 +17,44 @@ func _initialize() -> void:
 			ok = false
 	var Parser = load("res://scripts/dialogue/dlg_parser.gd")
 	var Cast = load("res://scripts/dialogue/cast.gd")
-	var act = load("res://scripts/world/act1.gd")
-	var nodes: Dictionary = Parser.parse(FileAccess.get_file_as_string("res://dialogue/act1.dlg"))
-	for p in Parser.validate(nodes):
-		print("DLG ", p)
-		ok = false
-	var src := FileAccess.get_file_as_string("res://scripts/world/act1.gd")
-	for id in nodes.keys():
-		for e in nodes[id]:
-			if e.t == "cmd":
-				if not e.name in KNOWN_CMDS:
-					print("DLG line %d: unknown command '%s'" % [e.line, e.name])
+	var Rig = load("res://scripts/actors/food_rig.gd")
+	var base := FileAccess.get_file_as_string("res://scripts/world/level.gd")
+	var total := 0
+	for act in [1, 2]:
+		var nodes: Dictionary = Parser.parse(FileAccess.get_file_as_string("res://dialogue/act%d.dlg" % act))
+		total += nodes.size()
+		for p in Parser.validate(nodes):
+			print("DLG act%d %s" % [act, p])
+			ok = false
+		var src := base + FileAccess.get_file_as_string("res://scripts/world/act%d.gd" % act)
+		for id in nodes.keys():
+			for e in nodes[id]:
+				var at := "DLG act%d line %d:" % [act, e.line]
+				if e.t == "cmd":
+					if not e.name in KNOWN_CMDS:
+						print("%s unknown command '%s'" % [at, e.name])
+						ok = false
+					if e.name == "event" and src.find("func _ev_%s(" % e.args[0]) < 0:
+						print("%s no event _ev_%s" % [at, e.args[0]])
+						ok = false
+					if e.name == "shot" and src.find('"%s":' % e.args[0]) < 0:
+						print("%s no shot '%s'" % [at, e.args[0]])
+						ok = false
+					if e.name == "checkpoint" and src.find('"%s": Vector3(' % e.args[0]) < 0:
+						print("%s no checkpoint '%s'" % [at, e.args[0]])
+						ok = false
+					if e.name in ["cam", "walk", "anim", "emote"] and e.args.size() > 0:
+						for who in (e.args if e.name == "cam" else [e.args[0]]):
+							if who != "off" and not Cast.CAST.has(who):
+								print("%s unknown actor '%s'" % [at, who])
+								ok = false
+				if e.t == "line" and not Cast.CAST.has(e.who):
+					print("%s unknown speaker '%s'" % [at, e.who])
 					ok = false
-				if e.name == "event" and src.find("func _ev_%s(" % e.args[0]) < 0:
-					print("DLG line %d: no event _ev_%s" % [e.line, e.args[0]])
+				if e.t == "line" and e.emo != "" and not Rig.EMO.has(e.emo):
+					print("%s unknown emotion '%s'" % [at, e.emo])
 					ok = false
-				if e.name == "shot" and src.find('"%s":' % e.args[0]) < 0:
-					print("DLG line %d: no shot '%s'" % [e.line, e.args[0]])
-					ok = false
-			if e.t == "line" and not Cast.CAST.has(e.who):
-				print("DLG line %d: unknown speaker '%s'" % [e.line, e.who])
-				ok = false
-			if e.t == "line" and e.emo != "" and not load("res://scripts/actors/food_rig.gd").EMO.has(e.emo):
-				print("DLG line %d: unknown emotion '%s'" % [e.line, e.emo])
-				ok = false
-	print("dialogue nodes: ", nodes.size())
+	print("dialogue nodes: ", total)
 	print("CHECK OK" if ok else "CHECK FAILED")
 	quit(0 if ok else 1)
 

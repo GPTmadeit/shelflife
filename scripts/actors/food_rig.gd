@@ -119,6 +119,7 @@ func build(s: Dictionary) -> void:
 		"donut": _build_donut()
 		"boule": _build_boule()
 		"roll": _build_roll()
+		"block": _build_block()
 		_: _build_egg()
 	body.position.y = leg_len
 	if not s.get("faceless", false):
@@ -160,6 +161,22 @@ func _build_egg() -> void:
 	_shoulder_dx = Meshes.profile_radius(_profile, _shoulder_y) - 0.02 * h
 	_hip_dx = h * 0.13
 	leg_len = h * 0.2 if spec.get("legs", false) else 0.0
+	if spec.get("ears", false):
+		# a chocolate rabbit: one ear standing, one bitten off (and hollow)
+		var choc := Mats.skin(col, 0.55)
+		var ear := _mi(Meshes.capsule(0.085 * h, 0.52 * h), choc)
+		ear.position = Vector3(-0.13 * h, 1.15 * h, 0.0)
+		ear.rotation.z = 0.12
+		ear.scale.z = 0.6
+		var stump := _mi(Meshes.cyl(0.08 * h, 0.09 * h, 0.1 * h, 12), choc)
+		stump.position = Vector3(0.14 * h, 0.97 * h, 0.0)
+		stump.rotation.z = -0.2
+		var hole := _mi(Meshes.cyl(0.055 * h, 0.055 * h, 0.012 * h, 12), Mats.solid(Color(0.08, 0.04, 0.02), 0.9))
+		hole.position = Vector3(0.15 * h, 1.022 * h, 0.0)
+		hole.rotation.z = -0.2
+		var bow := _mi(Meshes.torus(0.3 * h, 0.345 * h, 24, 8), Mats.skin(Color(0.85, 0.12, 0.2), 0.4))
+		bow.position.y = 0.23 * h
+		bow.scale = Vector3(1.0, 1.0, 1.0)
 	if spec.get("feather", false):
 		var f := _mi(Meshes.rounded_box(Vector3(0.05, 0.3, 0.012) * h, 0.012 * h, 2), Mats.skin(Color(0.95, 0.9, 0.82), 0.8))
 		f.name = "Feather"
@@ -280,7 +297,7 @@ func _build_bottle() -> void:
 func _build_can() -> void:
 	var label: Color = spec.get("color", Color(0.83, 0.42, 0.16))
 	var metal := Mats.solid(Color(0.75, 0.76, 0.78), 0.3, 0.9)
-	var r := 0.4 * h
+	var r: float = spec.get("r", 0.4) * h
 	var prof := PackedVector2Array([Vector2(0, 0), Vector2(r * 0.94, 0), Vector2(r, 0.025 * h),
 		Vector2(r, 0.975 * h), Vector2(r * 0.94, h), Vector2(0, h)])
 	_mi(Meshes.lathe(prof, 26), metal)
@@ -290,14 +307,75 @@ func _build_can() -> void:
 	body.rotation.z = spec.get("tilt", 0.0)
 	_surf = func(x: float, _y: float) -> float: return sqrt(maxf(r * r * 1.03 - x * x, 0.0))
 	_lid_color = label
+	var fs := minf(1.0, r / (0.4 * h))   # slim cans get a smaller face
 	_face_y = 0.6 * h
-	_eye_dx = 0.13 * h
-	_eye_r = 0.085 * h
-	_mouth_y = 0.36 * h
-	_mouth_w = 0.24 * h
+	_eye_dx = 0.13 * h * fs
+	_eye_r = 0.085 * h * fs
+	_mouth_y = (0.6 - 0.24 * fs) * h
+	_mouth_w = 0.24 * h * fs
 	_shoulder_y = 0.5 * h
 	_shoulder_dx = r
 	_hip_dx = 0.15 * h
+	if spec.has("label"):
+		var t := _label3d(spec.label, 0.11 * h * fs, spec.get("label_color", Color(1, 1, 1)))
+		t.position = Vector3(0, 0.2 * h, r * 1.02 + 0.008)
+		body.add_child(t)
+	if spec.get("helmet", false):
+		var hm := _mi(Meshes.hemi(r * 1.08, 20, 8), Mats.skin(Color(0.27, 0.36, 0.2), 0.7))
+		hm.position.y = 0.93 * h
+		hm.scale.y = 0.62
+		var brim := _mi(Meshes.cyl(r * 1.16, r * 1.16, 0.03 * h, 20), Mats.skin(Color(0.27, 0.36, 0.2), 0.7))
+		brim.position.y = 0.94 * h
+
+
+## A box-shaped body: tubs, bags, crackers, slices. w/h/d in world units.
+func _build_block() -> void:
+	var col: Color = spec.get("color", Color(0.85, 0.3, 0.2))
+	var w: float = spec.get("w", h)
+	var d: float = spec.get("d", w * 0.6)
+	var rad: float = spec.get("radius", minf(w, minf(h, d)) * 0.18)
+	var b := _mi(Meshes.rounded_box(Vector3(w, h, d), rad, 3), Mats.skin(col, spec.get("rough", 0.5)))
+	b.position.y = h * 0.5
+	var front := d * 0.5
+	if spec.has("accent"):
+		var band: Vector2 = spec.get("band", Vector2(0.08, 0.2))   # centre, height (of h)
+		var bm := _mi(Meshes.rounded_box(Vector3(w * 1.012, h * band.y, d * 1.02), minf(rad, h * band.y * 0.4), 2), Mats.skin(spec.accent, 0.5))
+		bm.position.y = h * (band.x + band.y * 0.5)
+	if spec.has("lid"):
+		var lid := _mi(Meshes.rounded_box(Vector3(w * 1.06, h * 0.16, d * 1.08), h * 0.06, 2), Mats.skin(spec.lid, 0.4))
+		lid.position.y = h * 0.97
+	if spec.get("crimp", false):
+		# a bag: flat sealed strips top and bottom
+		for y in [0.0, 1.0]:
+			var c := _mi(Meshes.box(Vector3(w * 0.94, h * 0.07, d * 0.12)), Mats.skin(col.darkened(0.18), 0.4))
+			c.position.y = h * (y * 1.02 - 0.01)
+	if spec.get("mold", false):
+		var fuzz := Mats.skin(Color(0.42, 0.62, 0.36), 1.0)
+		var pale := Mats.skin(Color(0.8, 0.86, 0.78), 1.0)
+		for k in 9:
+			var rr := _rng.randf_range(0.06, 0.15) * h
+			var m := _mi(Meshes.sphere(rr, 10, 6), fuzz if k % 3 != 0 else pale)
+			if k < 6:
+				m.position = Vector3(_rng.randf_range(-0.42, 0.42) * w, h * 1.04, _rng.randf_range(-0.3, 0.4) * d)
+			else:
+				m.position = Vector3([-0.44, 0.4, 0.46][k - 6] * w, [0.2, 0.84, 0.3][k - 6] * h, front)
+			m.scale.y = 0.6
+	var sz := minf(w, h)
+	_surf = func(_x: float, _y: float) -> float: return front
+	_lid_color = col
+	_face_y = spec.get("face_y", 0.58) * h
+	_eye_dx = 0.19 * sz
+	_eye_r = 0.125 * sz
+	_mouth_y = _face_y - 0.27 * sz
+	_mouth_w = 0.36 * sz
+	_shoulder_y = 0.45 * h
+	_shoulder_dx = w * 0.5
+	_hip_dx = w * 0.2
+	leg_len = spec.get("leg", 0.0)
+	if spec.has("label"):
+		var t := _label3d(spec.label, spec.get("label_size", 0.13 * sz), spec.get("label_color", Color(1, 1, 1)))
+		t.position = Vector3(0, spec.get("label_y", 0.14) * h, front + 0.006)
+		body.add_child(t)
 
 
 func _build_donut() -> void:

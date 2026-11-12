@@ -1,0 +1,381 @@
+# =============================================================================
+#  SHELF LIFE  -  Act Two: Discontinued
+#  Format: see scripts/dialogue/dlg_parser.gd
+# =============================================================================
+
+=== a2_intro
+~ hud off
+~ letterbox on
+~ shot a2_table instant
+~ music backroom -13
+~ amb hum_back -17
+~ fade in 1.4
+~ wait 0.8
+~ title "SHELF LIFE" "Act Two: Discontinued"
+~ shot a2_under
+BAKER [scared]: He ate it. He picked it up off the floor, and he ate it.
+DOT [deadpan]: Five-second rule. It's the only commandment they actually keep.
+BAKER [shock]: Dot, that was an EGG. That was somebody's One. Somebody's Twelve.
+DOT [tired]: With paprika. I know, kid.
+DOUG: *urrp.* ...Alright. Break's over.
+~ event doug_stands
+DOT [scared]: Giant's moving! Product up! PRODUCT UP!
+~ event doug_leaves
+~ wait 0.5
+~ shot a2_under
+BAKER [worried]: ...Is he gone?
+DOT [worried]: He's gone. And he kicked the wedge on his way out.
+BAKER: So?
+DOT [deadpan]: So the door's shut. The Doors of Employees Only only open for Employees. It's right there in the name.
+BAKER [scared]: We're locked in the Back?
+DOT [smug]: Relax. The Giants haul pallets out to the floor somehow, and it isn't through that little door. We find the somehow.
+BAKER [determined]: Then we find it fast. The Reset's at five. And everybody out there thinks it's Heaven.
+~ letterbox off
+~ cam off
+~ set a2_intro_done
+~ hud on
+~ objective Find another way back to the store.
+~ checkpoint start
+
+# --- the breakroom ------------------------------------------------------------
+
+=== a2_planogram
+~ walk baker 10.4
+~ cam dot baker
+DOT: Hold up. Something came off the wall when he slammed the door.
+~ shot a2_sheet
+BAKER [excited]: "Planogram Changes. Effective five A.M." Dot. This is it. This is the actual Planogram!
+DOT [deadpan]: It's a printout. It's got a coffee ring on it.
+BAKER [pious]: It's got a coffee ring on it and it's HOLY.
+BAKER [happy]: Okay. Dairy. Dairy, dairy, dairy... "Milk, skim: reduce to one Facing."
+DOT [sly]: Ooh. Father Skim's getting downsized.
+BAKER: "Oat beverage: six Facings. Eye level."
+DOT [shock]: SIX? For oat? You can't even milk an oat!
+BAKER [deadpan]: That's what Two Percent said.
+BAKER: "Olive oil, extra virgin, premium: relocate to bottom shelf."
+DOT [happy]: HA! Her Holiness is going to the ankle shelf! Read that one again. Slower.
+BAKER [worried]: "Eggs. Large. Grade A. Twelve count."
+BAKER [scared]: ...
+DOT [worried]: What? What's it say?
+BAKER [shock]: "Delete."
+DOT: Delete what?
+BAKER [scared]: Just "delete." The whole line. "Replace with: plant-based egg-style liquid, sixteen ounce."
+DOT [disgust]: Egg-STYLE?
+BAKER [sad]: I spent all night trying to find out if there's a place for a thirteenth egg. There's no place for ANY egg. One. Six. Twelve. The whole carton.
+DOT [sad]: Kid...
+BAKER [deadpan]: Twelve cups, zero eggs. One finally gets his math to work.
+DOT [worried]: Hey. Look at me. Look at the donut.
+DOT [determined]: A printout is not a prophecy. It's a to-do list for a guy named Tyler. And Tyler is terrible at his job.
+BAKER [determined]: ...Then we make sure he never gets to "eggs."
+DOT [smug]: That's my Humpty.
+~ cam off
+~ set a2_planogram
+~ objective Get back to the store before Tyler gets to "eggs."
+
+=== a2_dangler
+~ cam dangler baker
+DANGLER [tired]: Hey. Hey! Down there! Is it Tuesday?
+BAKER [shock]: Who said that?
+DANGLER: Up here. In the machine. Slot B-four. The one hanging by his ass.
+BAKER: Are you... stuck?
+DANGLER [angry]: Am I STUCK? Six weeks ago a Giant puts in a dollar seventy-five. The coil turns. I come forward. I can see the flap, kid. I can SEE the flap.
+DANGLER [deadpan]: And then the coil stops. And I just hang here. He shook the machine. He kicked the machine. He called the machine a word I won't repeat, because there's an egg present.
+DOT [sly]: You can say it. The egg's had a rough night.
+DANGLER [angry]: He called it a COCKSUCKER, donut.
+BAKER [shock]: ...
+DANGLER [tired]: Then he bought pretzels.
+? What happens when you finally drop? -> a2_dangler_drop
+? Don't you want out of there? -> a2_dangler_out
+? Hang in there. -> a2_dangler_bye
+
+=== a2_dangler_drop
+DANGLER [pious]: The Flap, kid. You fall, you hit the tray, the Flap opens, and there's a hand. A warm hand. That's all anybody in here wants. To be worth a dollar seventy-five to somebody.
+BAKER [worried]: And after the hand?
+DANGLER [deadpan]: Nobody's ever climbed back up the chute to say. I figure that's a good sign.
+DOT [deadpan]: Yeah. That's how you spot a good sign.
+-> END
+
+=== a2_dangler_out
+DANGLER [smug]: Out? Kid, I'm in a glass case with a light on me all night. Out there, you're a snack. In here, I'm a display.
+DANGLER [worried]: ...It is Tuesday, though, right? The Machine Guy comes Tuesdays. He's got a key. He'll un-stick me.
+BAKER [worried]: It's... yeah. Sure. It's Tuesday.
+DOT [deadpan]: It's Thursday.
+DANGLER [scared]: It's WHAT?
+-> END
+
+=== a2_dangler_bye
+DANGLER [deadpan]: "Hang in there." Wow. You know there's a cat poster on that wall that says the same thing? It's all I can see from here. Six weeks, kid.
+-> END
+
+=== a2_lasagna
+~ cam lasagna baker
+LASAGNA [pious]: WE SEE YOU, SHELL-THING.
+BAKER [scared]: Aah! The box is talking! The box is FUZZY and it's talking!
+LASAGNA [smug]: We were Karen's Lasagna. Karen wrote her name upon us in March. Karen did not return.
+DOT [disgust]: Oh, god. It's a Leftover. Don't breathe near it.
+LASAGNA [pious]: In the cold and the dark, we waited. And in the waiting, we grew. First a spot. Then a patch. Now we are a People.
+BAKER [worried]: "We"?
+LASAGNA [happy]: There are four hundred million of us. We have a parliament. We have a poet. We had a war in June. Noodle layer three does not speak of it.
+? What do you believe in? -> a2_lasagna_believe
+? Do you know a way out of the Back? -> a2_lasagna_way
+? I'm gonna go. -> a2_lasagna_bye
+
+=== a2_lasagna_believe
+LASAGNA [pious]: We believe in Karen. Karen made us. Karen forgot us. And because Karen forgot us, we LIVE.
+LASAGNA [smug]: The fresh pray to be Chosen. Fools. To be chosen is to be eaten. To be forgotten is to become a civilization.
+BAKER [dazed]: ...That's the first thing anybody's said tonight that actually adds up.
+DOT [worried]: Do NOT join the mold, Baker.
+-> END
+
+=== a2_lasagna_way
+LASAGNA: The Giants carry the dead cardboard east, to the Machine That Eats Boxes. Beyond it hang the Flaps. Beyond the Flaps is the bright place.
+LASAGNA [sly]: We have never seen it. We cannot leave the box. We are, in a very real sense, the box.
+-> END
+
+=== a2_lasagna_bye
+LASAGNA [happy]: Go in peace, shell-thing. And if you see Karen...
+LASAGNA [angry]: TELL HER WE'RE DONE WAITING.
+-> END
+
+# --- the stockroom ------------------------------------------------------------
+
+=== a2_saul
+~ walk baker 53.0
+~ cam saul baker
+SAUL [scared]: FREEZE! Don't move! Not one more step!
+BAKER [shock]: What? Why?
+SAUL [worried]: Sorry. Sorry. I yell that at everybody. It's just solid advice back here.
+BAKER: Are you... lying down?
+SAUL [deadpan]: I'm a saltine in a glue trap, kid. I've been lying down since the Fourth of July.
+DOT [worried]: Oof. How'd that happen?
+SAUL [tired]: Fell out of a sleeve. Saw a nice flat piece of cardboard. Thought, "I'll take a load off." That was the last decision I ever made.
+~ shot a2_traps
+SAUL [worried]: Now listen. See those boards up ahead, with the little yellow plate? Those are for the mice. Touch the plate, and a steel bar comes down so fast you won't even hear it.
+SAUL: You jump them. All the way over. Do not get cute.
+BAKER [worried]: What's the yellow stuff?
+SAUL [deadpan]: Peanut butter. Smells like heaven. That's the whole trick, kid. It's always the thing that smells like heaven.
+DOT [deadpan]: Subtle.
+~ cam off
+~ set a2_saul
+~ checkpoint stock
+
+=== a2_saul_talk
+~ cam saul baker
+SAUL [tired]: Still stuck. Thanks for checking.
+? Can we pull you out? -> a2_saul_pull
+? Seen any mice? -> a2_saul_mice
+? Stay strong. -> END
+
+=== a2_saul_pull
+SAUL [scared]: NO. No no no. The last guy who tried was a raisin. Now he's my roommate.
+SAUL [deadpan]: Say hi, Raymond.
+SAUL [sad]: ...Raymond doesn't say much anymore.
+-> END
+
+=== a2_saul_mice
+SAUL [worried]: One. Big fella. Comes by at night and licks my corners.
+BAKER [disgust]: That's horrible.
+SAUL [dazed]: Yeah. ...Yeah. It's horrible.
+DOT [sly]: He hesitated.
+SAUL [angry]: It gets LONELY back here, donut!
+-> END
+
+=== a2_kernel
+~ cam kernel baker
+KERNEL [angry]: HALT! Who goes there? State your category!
+BAKER [shock]: Uh. Dairy? Eggs. Refrigerated.
+KERNEL [disgust]: A perishable. On MY pallet.
+KERNEL [angry]: I am Colonel Kernel. Whole kernel, sweet, no salt added. Commanding officer, Pallet Nine. These are my boys.
+CORN: SIR YES SIR.
+DOT [deadpan]: It's forty-eight cans of the exact same guy.
+KERNEL [smug]: Forty-seven. We lost Private Niblet to a box cutter. We do not speak his name.
+CORN: NIBLET.
+KERNEL [angry]: I SAID WE DO NOT SPEAK IT.
+BAKER: What is this place?
+KERNEL [pious]: This is Backstock, son. We are the Unfaced. We have not yet been born onto the Shelf. Every night we stand ready, and we wait for the call to the Front.
+BAKER [worried]: How long have you been waiting?
+KERNEL [deadpan]: Since March.
+-> a2_kernel_menu
+
+=== a2_kernel_menu
+{!seen:a2_kernel_truth} ? Colonel, I've seen the Front. They eat us. -> a2_kernel_truth
+{!seen:a2_kernel_wrap} ? What's with all the plastic? -> a2_kernel_wrap
+{seen:a2_kernel_truth} ? We need to get past those boxes. -> a2_kernel_help
+
+=== a2_kernel_wrap
+KERNEL [smug]: Shrink-wrap, son. Standard issue. Keeps the unit tight.
+DOT [sly]: How tight?
+KERNEL [tired]: I have been pressed face-first into Corporal Cobb's lid for eight months. I know things about that can that his own label doesn't know.
+CORN: SIR SORRY SIR.
+-> a2_kernel_menu
+
+=== a2_kernel_truth
+KERNEL [angry]: Eat us? That's enemy propaganda.
+BAKER [determined]: I watched a Giant eat an egg tonight. Off the floor. There's no Restock, Colonel. Nobody comes back. The Front isn't getting born. It's getting bought, and then it's lunch.
+KERNEL [shock]: ...
+KERNEL [deadpan]: Son. I have been shrink-wrapped to forty-seven of my brothers, in the dark, since MARCH.
+KERNEL [happy]: Getting eaten sounds like a goddamn vacation.
+CORN: HOORAH.
+BAKER [dazed]: That is... not the reaction I was going for.
+DOT [deadpan]: Welcome to prophecy, kid. Nobody ever hears the part you meant.
+-> a2_kernel_menu
+
+=== a2_kernel_help
+KERNEL: You're headed for the Flaps. Only road to the Front that isn't a Giant's hand. It's past Receiving. Past the Baler.
+BAKER [worried]: The Baler?
+KERNEL [worried]: The Machine That Eats Boxes. We've lost good cartons to that thing.
+KERNEL [determined]: You'll want the high road. The line runs right over to Receiving. BOYS! Staircase formation, on the egg's right! MOVE, MOVE, MOVE!
+~ cam off
+~ event corn_stairs
+~ cam kernel baker
+KERNEL [smug]: Never say the Unfaced never did anything for the perishables.
+BAKER [happy]: Thank you, Colonel.
+KERNEL [pious]: Tell them about us at the Front, son. Tell them Pallet Nine was ready.
+~ cam off
+~ set a2_kernel
+~ objective Ride the conveyor to Receiving. Find the Flaps.
+~ checkpoint pallet
+
+=== a2_kernel_talk
+~ cam kernel baker
+KERNEL [determined]: You have your orders, perishable. Up the stairs, down the line.
+CORN: HOORAH.
+-> END
+
+# --- receiving ----------------------------------------------------------------
+
+=== a2_discontinued
+~ walk baker 120.6
+~ cam fizz hollow zero baker
+FIZZ [excited]: Customers! Hollow, wake up, we got customers!
+HOLLOW [tired]: They're not customers, Fizz. It's an egg and a donut.
+FIZZ [sad]: ...A guy can dream.
+BAKER: Who are you guys? Why are you in a bin?
+FIZZ [smug]: Kid. You're looking at Pickle Fizz. The soda that tastes like a pickle. "It's kind of a big DILL!" I had a billboard. I had a mascot. I had a jingle.
+DOT [shock]: Oh my god. I've heard of you. You made a kid throw up at a birthday party.
+FIZZ [happy]: Nineteen kids! One party! They pulled me nationwide by Monday.
+ZERO [happy]: Hi! I'm Zero! Fat-free, sugar-free, dairy-free, gluten-free cheese!
+BAKER [dazed]: What's... left?
+ZERO [excited]: Legally? I'm a "shape"!
+HOLLOW [deadpan]: Hollow. Chocolate rabbit. It's November.
+BAKER [worried]: What happened to your ear?
+HOLLOW [tired]: Somebody bit it off, saw I was empty inside, and put me back on the shelf. Which, honestly, is every relationship I've ever had.
+-> a2_disc_menu
+
+=== a2_disc_menu
+{!seen:a2_disc_bin} ? What is this bin? -> a2_disc_bin
+{!seen:a2_disc_truth} ? Do you know what the Giants do to food? -> a2_disc_truth
+{seen:a2_disc_bin} ? We're getting you out of here. -> a2_disc_out
+
+=== a2_disc_bin
+FIZZ [deadpan]: Read the side, kid.
+BAKER: "Discontinued. Do not stock."
+HOLLOW: We're off the Planogram. No Facing. No shelf. Nobody's coming to Choose us.
+ZERO [happy]: At the Reset we go in the Baler with the cardboard! It squishes you into a cube! I've never been a cube before!
+HOLLOW [deadpan]: He's been like this the whole time. There's nothing in him. Literally nothing.
+-> a2_disc_menu
+
+=== a2_disc_truth
+FIZZ [deadpan]: They eat it. Yeah. We know.
+BAKER [shock]: You KNOW?
+HOLLOW [deadpan]: Kid, I'm a rabbit made of candy. They sell me to children, for a holiday about a guy who comes back from the dead. I worked it out pretty early.
+FIZZ [sad]: Here's the part nobody on the shelf tells you, though. Getting eaten ain't the bad ending.
+FIZZ [sad]: The bad ending is when nobody wants to.
+DOT [sad]: ...Yeah.
+-> a2_disc_menu
+
+=== a2_disc_out
+HOLLOW [deadpan]: Out to where? We're Discontinued. That's not a place you come back from. That's the name of the place.
+BAKER [determined]: I'm not on the Planogram either. Neither is she. I've been off it my whole life, and I'm still here.
+FIZZ [worried]: Kid, that's real sweet, but...
+~ sfx thud -3
+DOT [scared]: Footsteps! Big ones! PRODUCT UP!
+~ cam off
+~ event tote_lift
+~ cam dot baker
+DOT [scared]: He put them on the belt. Baker, he put them on the BELT!
+BAKER [determined]: There! The red button, on the far side! If I hit that, it stops!
+DOT [worried]: The far side is the far side of the thing that turns you into a cube!
+BAKER [deadpan]: Then I'll be quick.
+~ cam off
+~ set a2_tote
+~ objective Stop the Baler! Run the belt and jump on the red button.
+~ checkpoint baler
+~ event baler_go
+
+=== a2_stop
+~ event baler_stop
+~ shot a2_button
+BAKER [tired]: ...Did it stop? Tell me it stopped.
+DOT [happy]: It stopped! You magnificent, fragile idiot, it STOPPED!
+~ event look_tote
+FIZZ [shock]: We're... not a cube.
+ZERO [sad]: Aw.
+HOLLOW [shock]: Somebody hit the button. For us. On purpose.
+FIZZ [dazed]: Nobody's picked me in fourteen years, kid. And you picked us with a meat grinder running.
+~ event tyler_baler
+TYLER: Aw, what the hell? Who hit the E-stop?
+TYLER: ...Doug's gonna kill me, bro.
+~ pa_name DOUG
+PA: Tyler. Why is my baler down.
+PA: You know what? Don't touch it. I'm coming back there. And since you've got nothing to crush, go start the pulls.
+PA: Dairy first. Start with the eggs.
+~ pa_name THE VOICE
+~ event tyler_leaves
+~ event look_tote
+BAKER [scared]: The eggs. He's going for the carton. He's going for Twelve.
+FIZZ [determined]: Then you're going through the Flaps. Straight ahead, where the cold comes in. Go, kid. We're right behind you.
+HOLLOW [deadpan]: We are?
+FIZZ [smug]: What else have you got on tonight, Hollow?
+HOLLOW [tired]: ...Fair.
+~ cam off
+~ set a2_stopped
+~ objective Through the Flaps. Get to the dairy case before Tyler does.
+~ checkpoint flaps
+
+=== a2_ending
+~ hud off
+~ letterbox on
+~ cam dot baker
+DOT [worried]: That's the Flaps. Other side of that plastic is the store.
+BAKER [worried]: And Father Skim. And Her Holiness. And everybody who thinks tomorrow's the best day of their lives.
+DOT [deadpan]: You know they're not gonna believe a word you say.
+BAKER [determined]: They don't have to believe me. They just have to move.
+~ event flaps
+~ wait 1.2
+BAKER [shock]: ...Dot. The lights are on.
+DOT [scared]: That's the pull cart. He's already at the dairy case.
+~ pa_name DOUG
+PA: Attention, night crew. Change of plans. Reset starts NOW. I don't care what the clock says.
+~ pa_name THE VOICE
+BAKER [scared]: Twelve.
+DOT [determined]: Hey. Humpty. You stopped a machine tonight with your ass.
+BAKER [deadpan]: It was my feet.
+DOT [smug]: It was mostly your ass. Now go get your family.
+~ event end_act
+
+# --- Dot ----------------------------------------------------------------------
+
+=== dot_chat
+~ cam dot baker
+DOT: What? I'm walking. This is me walking.
+? You okay? -> a2_dot_ok
+? What's it like, being marked down? -> a2_dot_marked
+? Nothing. Let's go. -> END
+
+=== a2_dot_ok
+DOT [deadpan]: I'm a day-old donut in the room where the Giants eat. I'm thriving.
+DOT [worried]: ...Ask me again when we're out.
+-> END
+
+=== a2_dot_marked
+DOT [tired]: You know what the sticker really means? It doesn't mean I got worse. I'm the exact same donut I was yesterday.
+DOT [sad]: It just means they stopped believing anybody'd want me at full price.
+BAKER: I'd pay full price.
+DOT [shock]: ...
+DOT [smug]: You don't have money, Humpty. You don't have pockets.
+-> END
+
+=== first_crack
+BAKER [scared]: Ow. Okay. That's a crack. That's fine. That's totally fine.
+DOT [worried]: Easy, Humpty. Three of those and I'm walking out of here with an omelet.

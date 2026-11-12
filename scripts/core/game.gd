@@ -11,6 +11,7 @@ var flags := {}                ## story flags, name -> true
 var visited := {}              ## dialogue nodes seen, id -> true
 var scraps := {}               ## Planogram scraps collected, id -> true
 var checkpoint := "start"
+var act := 1                   ## which act the checkpoint belongs to
 var settings := {
 	"master": 0.9, "music": 0.7, "sfx": 0.85, "voice": 0.75,
 	"fullscreen": false, "shake": true, "text_speed": 1.0, "quality": 2, "updates": true,
@@ -61,10 +62,24 @@ func go_title() -> void:
 	switch_to(load("res://scripts/ui/title.gd").new())
 
 
+const ACTS := {1: "Act One: Unplanned", 2: "Act Two: Discontinued"}
+
+
 func start_level(cp: String) -> void:
-	var lvl: Node = load("res://scripts/world/act1.gd").new()
+	var lvl: Node = load("res://scripts/world/act%d.gd" % act).new()
 	lvl.set("start_checkpoint", cp)
 	switch_to(lvl)
+
+
+## Starts an act from its beginning, keeping flags and scraps.
+func start_act(n: int) -> void:
+	act = n
+	checkpoint = "start"
+	if n >= 2:
+		# Act Two opens with Dot at Baker's side, however you got here
+		set_flag("dot_joined")
+	save_game()
+	start_level("start")
 
 
 func new_game() -> void:
@@ -72,7 +87,23 @@ func new_game() -> void:
 	visited = {}
 	scraps = {}
 	checkpoint = "start"
+	act = 1
 	start_level("start")
+
+
+## Replays an act from the title screen. Scraps stay; that act's story resets.
+func replay_act(n: int) -> void:
+	load_game()
+	for k in flags.keys():
+		if (n == 1 and not k.begins_with("a2_") and not k.ends_with("_done")) or (n == 2 and k.begins_with("a2_")):
+			flags.erase(k)
+	if n == 1:
+		visited = {}
+	else:
+		for k in visited.keys():
+			if k.begins_with("a2_"):
+				visited.erase(k)
+	start_act(n)
 
 
 func continue_game() -> void:
@@ -103,7 +134,7 @@ func has_save() -> bool:
 
 func save_game() -> void:
 	var d := {
-		"version": Version.VERSION, "checkpoint": checkpoint, "flags": flags,
+		"version": Version.VERSION, "act": act, "checkpoint": checkpoint, "flags": flags,
 		"visited": visited, "scraps": scraps, "time": Time.get_unix_time_from_system(),
 	}
 	var f := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
@@ -119,10 +150,19 @@ func load_game() -> bool:
 	if typeof(d) != TYPE_DICTIONARY:
 		return false
 	checkpoint = str(d.get("checkpoint", "start"))
+	act = clampi(int(d.get("act", 1)), 1, ACTS.size())
 	flags = _dict(d.get("flags", {}))
 	visited = _dict(d.get("visited", {}))
 	scraps = _dict(d.get("scraps", {}))
 	return true
+
+
+## What the save says without loading it: {act, checkpoint, flags} or {}.
+func peek_save() -> Dictionary:
+	if not has_save():
+		return {}
+	var d = JSON.parse_string(FileAccess.get_file_as_string(SAVE_PATH))
+	return d if typeof(d) == TYPE_DICTIONARY else {}
 
 
 func delete_save() -> void:

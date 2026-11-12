@@ -24,6 +24,13 @@ const VOICES := {
 	"doug": ["tri", 118.0, 0.06, 0.0, -0.03],
 	"pa": ["saw", 205.0, 0.05, 0.0, 0.0],
 	"narc": ["square", 940.0, 0.0, 0.0, 0.0],
+	"dangler": ["saw", 430.0, 0.1, 0.0, -0.05],
+	"lasagna": ["tri", 170.0, 0.05, 0.06, 0.0],
+	"kernel": ["square", 215.0, 0.02, 0.0, -0.08],
+	"saul": ["tri", 470.0, 0.03, 0.01, -0.07],
+	"fizz": ["saw", 300.0, 0.14, 0.0, 0.04],
+	"hollow": ["sine", 245.0, 0.0, 0.0, -0.04],
+	"zero": ["sine", 720.0, 0.0, 0.03, 0.1],
 }
 const BLIP_VARIANTS := 6
 
@@ -208,6 +215,13 @@ func make_all() -> Dictionary:
 	out.gasp = wav(_gasp())
 	out.hum_fridge = wav(_hum(4.0, 60.0, 0.28, 900.0), true)
 	out.hum_store = wav(_hum(4.0, 120.0, 0.12, 500.0), true)
+	out.snap = wav(_mix(noise(0.12, 9000.0, 0.0003, 0.012, 1.0, 1800.0), tone(0.25, 2400.0, 900.0, "tri", 0.001, 0.05, 0.5)))
+	out.slam = wav(_slam())
+	out.alarm = wav(_alarm())
+	out.hiss = wav(noise(0.9, 6000.0, 0.02, 0.45, 0.4, 1500.0))
+	out.hum_back = wav(_hum(4.0, 50.0, 0.22, 420.0), true)
+	out.machine = wav(_machine(), true)
+	out.backroom = wav(_backroom(), true)
 	out.tension = wav(_tension(), true)
 	out.muzak = wav(_muzak(), true)
 	return out
@@ -394,6 +408,56 @@ func _hum(dur: float, f: float, gain: float, lp_hz: float) -> PackedFloat32Array
 		a[i] = (sin(TAU * f * t) * 0.6 + sin(TAU * f * 2.0 * t) * 0.25 + sin(TAU * f * 3.0 * t) * 0.08) * gain + lp * gain * 1.6
 	_lowpass(a, lp_hz)
 	return _loopify(a, 0.5)
+
+
+func _slam() -> PackedFloat32Array:
+	var a := tone(0.7, 95.0, 30.0, "sine", 0.002, 0.2, 1.0)
+	_add(a, noise(0.5, 700.0, 0.001, 0.09, 0.9))
+	_add(a, tone(0.5, 1900.0, 1700.0, "tri", 0.001, 0.03, 0.25))
+	return _normalize(a, 0.95)
+
+
+func _alarm() -> PackedFloat32Array:
+	var out := _buf(1.6)
+	for k in 4:
+		_add(out, tone(0.36, 880.0 if k % 2 == 0 else 660.0, 880.0 if k % 2 == 0 else 660.0, "square", 0.004, 0.3, 0.3), k * 0.4)
+	_lowpass(out, 3200.0)
+	return out
+
+
+## The baler at work: a chugging motor and a hydraulic wheeze.
+func _machine() -> PackedFloat32Array:
+	var dur := 2.0
+	var out := _buf(dur + 0.4)
+	for k in 16:
+		_add(out, tone(0.1, 62.0, 48.0, "saw", 0.003, 0.05, 0.5 if k % 4 == 0 else 0.3), k * dur / 16.0)
+		if k % 4 == 2:
+			_add(out, noise(0.16, 2600.0, 0.01, 0.07, 0.16, 700.0), k * dur / 16.0)
+	_lowpass(out, 1300.0)
+	return _loopify(_normalize(out, 0.55), 0.4)
+
+
+## The Back: a slow, hollow bass figure, far-off clanks and a lonely vibes line.
+func _backroom() -> PackedFloat32Array:
+	var bpm := 76.0
+	var beat := 60.0 / bpm
+	var dur := beat * 32.0
+	var out := _buf(dur + 0.8)
+	var bass := [38, 38, 45, 43, 36, 36, 43, 41]
+	for bar in 8:
+		var m: int = bass[bar]
+		for k in [0.0, 1.5, 2.5]:
+			var n := tone(beat * 0.9, _hz(m), _hz(m), "tri", 0.008, 0.4, 0.5 if k == 0.0 else 0.32)
+			_add(out, n, (bar * 4 + k) * beat)
+		_add(out, noise(0.05, 8000.0, 0.001, 0.014, 0.1, 4000.0), (bar * 4 + 2) * beat)
+		if bar % 2 == 1:
+			_add(out, bell(1.4, _hz(86), 0.035, 0.5), (bar * 4 + 3.5) * beat)
+	var mel := [[62, 0.0], [65, 2.0], [69, 3.0], [67, 4.0], [65, 6.5], [62, 8.0], [60, 10.0], [62, 11.0], [57, 12.0],
+		[62, 16.0], [65, 18.0], [70, 19.0], [69, 20.0], [65, 22.5], [64, 24.0], [60, 26.0], [61, 27.0], [62, 28.0]]
+	for n2 in mel:
+		_add(out, _vibes(_hz(n2[0]), beat * 2.2), n2[1] * beat, 0.5)
+	_lowpass(out, 2400.0)
+	return _loopify(_normalize(out, 0.6), 0.8)
 
 
 ## Low, sneaky pulse for the Narc's patrol.

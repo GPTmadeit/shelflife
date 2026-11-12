@@ -22,7 +22,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 40
+    timeout-minutes: 55
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
@@ -61,14 +61,21 @@ jobs:
       - name: Build the release files
         run: tools/package.sh --testkit testkit
 
-      # The exported game plays all of Act One by itself (auto-read dialogue,
-      # a bot walking right, no fall damage) and has to reach the end card.
+      # The exported game plays each act by itself (auto-read dialogue, a bot
+      # walking right, no fall damage) and has to reach the end card.
       - name: Play Act One start to finish
         run: |
           mkdir play && (cd play && unzip -q ../dist/ShelfLife-linux-x86_64.zip)
           XDG_DATA_HOME="$RUNNER_TEMP/play-data" timeout 1200 play/ShelfLife.x86_64 --headless -- \
             --cp start --auto --bot --godmode --trace --end-quit --quit 1000 > play.log 2>&1 || true
           grep "ACT ONE COMPLETE" play.log || { tail -80 play.log; echo "::error::the playthrough didn't reach the end of Act One"; exit 1; }
+
+      - name: Play Act Two start to finish
+        run: |
+          XDG_DATA_HOME="$RUNNER_TEMP/play-data2" timeout 1200 play/ShelfLife.x86_64 --headless -- \
+            --level 2 --cp start --auto --bot --godmode --trace --end-quit --quit 1000 > play2.log 2>&1 || true
+          grep "ACT TWO COMPLETE" play2.log || { tail -80 play2.log; echo "::error::the playthrough didn't reach the end of Act Two"; exit 1; }
+          cat play2.log >> play.log
 
       - uses: actions/upload-artifact@v4
         if: always()
