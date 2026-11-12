@@ -25,7 +25,7 @@ var _upd_link: LinkButton
 func _ready() -> void:
 	_scene()
 	_build_ui()
-	Sfx.music("muzak", -16.0, 2.0)
+	Sfx.music("muzak", -9.0, 2.0)
 	Sfx.ambience("hum_fridge", -20.0)
 
 

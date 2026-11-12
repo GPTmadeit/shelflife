@@ -1,7 +1,8 @@
 extends Node
-## Plays the synthesized sounds. Generation runs on a worker thread at
-## startup; anything requested before it finishes is skipped, except music
-## and ambience, which start as soon as they exist.
+## Plays the synthesized sounds. Generation runs on worker threads at
+## startup, in a few shares side by side; a sound requested before its share
+## is done is skipped, except music and ambience, which start as soon as
+## they exist (at the volume that was asked for).
 
 const Synth = preload("res://scripts/core/synth.gd")
 const POOL := 12
@@ -9,8 +10,9 @@ const POOL3D := 10
 
 var streams := {}
 var is_ready := false
-var _task := -1
-var _result := {}
+var _tasks := {}          # worker task id -> which share of the sounds (see Synth.make_part)
+var _made := {}           # share -> its streams, handed over by the worker thread
+var _mutex := Mutex.new()
 var _pool: Array[AudioStreamPlayer] = []
 var _pool3d: Array[AudioStreamPlayer3D] = []
 var _voices: Array[AudioStreamPlayer] = []
@@ -19,6 +21,8 @@ var _i := 0
 var _i3 := 0
 var _music: AudioStreamPlayer
 var _music_name := ""
+var _music_vol := -6.0    # what a music() call asked for before its stream existed
+var _music_fade := 1.0
 var _music_tween: Tween
 var _amb := {}            # name -> AudioStreamPlayer
 var _amb_wanted := {}     # name -> volume_db (requested before ready)
@@ -47,33 +51,59 @@ func _ready() -> void:
 	_music = AudioStreamPlayer.new()
 	_music.bus = "Music"
 	add_child(_music)
-	_task = WorkerThreadPool.add_task(_generate, false, "synthesize sounds")
+	# high priority: only a fraction of the pool's threads take low-priority
+	# tasks (one, on a four-core machine), which would run the shares in a row
+	for part in Synth.PARTS:
+		_tasks[WorkerThreadPool.add_task(_generate.bind(part), true, "synthesize sounds")] = part
 
 
-func _generate() -> void:
-	_result = Synth.new().make_all()
+## Runs on a worker thread.
+func _generate(part: int) -> void:
+	var streams_made: Dictionary = Synth.new(part).make_part(part)
+	_mutex.lock()
+	_made[part] = streams_made
+	_mutex.unlock()
 
 
 func _process(_dt: float) -> void:
-	if _task != -1 and WorkerThreadPool.is_task_completed(_task):
-		WorkerThreadPool.wait_for_task_completion(_task)
-		_task = -1
-		streams = _result
+	if _tasks.is_empty():
+		return
+	for id in _tasks.keys():
+		if not WorkerThreadPool.is_task_completed(id):
+			continue
+		WorkerThreadPool.wait_for_task_completion(id)
+		var part: int = _tasks[id]
+		_tasks.erase(id)
+		_mutex.lock()
+		var got: Dictionary = _made.get(part, {})
+		_made.erase(part)
+		_mutex.unlock()
+		streams.merge(got)
+		_start_wanted()
+	if _tasks.is_empty():
 		is_ready = true
 		print("sounds ready in %d ms" % Time.get_ticks_msec())
-		if _music_name != "" and not _music.playing:
-			var name := _music_name
-			_music_name = ""
-			music(name)
-		for a in _amb_wanted.keys():
-			ambience(a, _amb_wanted[a])
-		_amb_wanted.clear()
+
+
+## Starts the music and ambience that were asked for before they existed.
+func _start_wanted() -> void:
+	if _music_name != "" and not _music.playing and streams.has(_music_name):
+		var name := _music_name
+		_music_name = ""
+		if Game.dev.has("trace"):
+			print("music %s starts at %.0f dB, %d ms in" % [name, _music_vol, Time.get_ticks_msec()])
+		music(name, _music_vol, _music_fade)
+	for a in _amb_wanted.keys():
+		if streams.has(a):
+			var vol: float = _amb_wanted[a]
+			_amb_wanted.erase(a)
+			ambience(a, vol)
 
 
 func _exit_tree() -> void:
-	if _task != -1:
-		WorkerThreadPool.wait_for_task_completion(_task)
-		_task = -1
+	for id in _tasks.keys():
+		WorkerThreadPool.wait_for_task_completion(id)
+	_tasks.clear()
 
 
 func play(name: String, vol_db := 0.0, pitch := 1.0) -> void:
@@ -123,7 +153,9 @@ func music(name: String, vol_db := -6.0, fade := 1.0) -> void:
 	_music_name = name
 	var s: AudioStream = streams.get(name)
 	if s == null:
-		return  # starts in _process once synthesized
+		_music_vol = vol_db   # starts in _process once synthesized
+		_music_fade = fade
+		return
 	_music.stream = s
 	_music.volume_db = -40.0
 	_music.play()

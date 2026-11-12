@@ -5,6 +5,8 @@ Each version's section here becomes its release notes on GitHub.
 ## 0.2.3 (2026-11-12)
 
 - In Act One, three story moments could be jumped clean over: meeting Her Holiness, Beans's warning about the Narc, and the bakery checkpoint. Their zones now cover wherever you can land.
+- The game's sounds are ready about twice as fast after launch (2 seconds instead of 4.4 on a four-core machine), so the title music comes in sooner. They are now built on several processor cores at once.
+- Music asked for before the sounds were ready used to come in louder than intended. It now starts at the volume it was asked for.
 
 ## 0.2.2 (2026-11-12)
 

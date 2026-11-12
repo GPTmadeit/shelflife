@@ -33,12 +33,13 @@ const VOICES := {
 	"zero": ["sine", 720.0, 0.0, 0.03, 0.1],
 }
 const BLIP_VARIANTS := 6
+const PARTS := 3                ## see make_part()
 
 var _rng := RandomNumberGenerator.new()
 
 
-func _init() -> void:
-	_rng.seed = 20261110
+func _init(part := 0) -> void:
+	_rng.seed = 20261110 + part * 7919
 
 
 # --- helpers ----------------------------------------------------------------
@@ -180,50 +181,65 @@ func bell(dur: float, f: float, gain := 0.5, decay := 0.6) -> PackedFloat32Array
 # --- the catalogue ------------------------------------------------------------
 
 ## Returns name -> AudioStreamWAV. Short sounds first, loops last.
+## Everything, on the calling thread.
 func make_all() -> Dictionary:
 	var out := {}
-	# Voice blips: one short syllable per variant, pitched around the voice.
-	var steps := [0.9, 0.96, 1.0, 1.05, 1.1, 1.16]
-	for v in VOICES.keys():
-		var p: Array = VOICES[v]
-		for k in BLIP_VARIANTS:
-			out["blip_%s_%d" % [v, k]] = wav(_blip(p[0], p[1] * steps[k], p[2], p[3], p[4], v == "pa"))
-	out.step = wav(_gain(noise(0.035, 4200.0, 0.001, 0.008, 0.5, 900.0), 1.0))
-	out.jump = wav(tone(0.14, 330.0, 760.0, "tri", 0.004, 0.06, 0.45))
-	out.land = wav(_mix(tone(0.12, 150.0, 70.0, "sine", 0.002, 0.04, 0.8), noise(0.08, 1800.0, 0.001, 0.02, 0.35)))
-	out.crack = wav(_crack())
-	out.splat = wav(_splat())
-	out.bounce = wav(tone(0.32, 210.0, 520.0, "sine", 0.004, 0.12, 0.6, 0.06))
-	out.chime = wav(_mix(bell(1.6, 659.25, 0.45, 0.5), bell(1.4, 523.25, 0.45, 0.55), 0.42))
-	out.beep = wav(tone(0.09, 1180.0, 1180.0, "square", 0.002, 0.05, 0.25))
-	out.alert = wav(_alert())
-	out.thud = wav(_thud())
-	out.whoosh = wav(_whoosh())
-	out.grab = wav(_mix(tone(0.16, 900.0, 300.0, "tri", 0.002, 0.05, 0.3), tone(0.2, 90.0, 50.0, "sine", 0.002, 0.08, 0.7)))
-	out.clunk = wav(_clunk())
-	out.ui_move = wav(tone(0.05, 880.0, 940.0, "sine", 0.002, 0.02, 0.25))
-	out.ui_ok = wav(_mix(tone(0.12, 660.0, 660.0, "tri", 0.003, 0.05, 0.3), tone(0.16, 990.0, 990.0, "tri", 0.003, 0.06, 0.3), 0.06))
-	out.objective = wav(_mix(bell(1.0, 784.0, 0.32, 0.4), bell(1.0, 1046.5, 0.32, 0.4), 0.13))
-	out.checkpoint = wav(_arp([523.25, 659.25, 783.99], 0.09, 0.32))
-	out.scrap = wav(_arp([783.99, 987.77, 1174.66, 1567.98], 0.07, 0.28))
-	out.sting = wav(_sting())
-	out.reveal = wav(_reveal())
-	out.door = wav(_door())
-	out.chomp = wav(_chomp())
-	out.boo = wav(_mix(tone(0.5, 300.0, 180.0, "saw", 0.02, 0.25, 0.25), tone(0.5, 303.0, 182.0, "saw", 0.02, 0.25, 0.25)))
-	out.cheer = wav(_cheer())
-	out.gasp = wav(_gasp())
-	out.hum_fridge = wav(_hum(4.0, 60.0, 0.28, 900.0), true)
-	out.hum_store = wav(_hum(4.0, 120.0, 0.12, 500.0), true)
-	out.snap = wav(_mix(noise(0.12, 9000.0, 0.0003, 0.012, 1.0, 1800.0), tone(0.25, 2400.0, 900.0, "tri", 0.001, 0.05, 0.5)))
-	out.slam = wav(_slam())
-	out.alarm = wav(_alarm())
-	out.hiss = wav(noise(0.9, 6000.0, 0.02, 0.45, 0.4, 1500.0))
-	out.hum_back = wav(_hum(4.0, 50.0, 0.22, 420.0), true)
-	out.machine = wav(_machine(), true)
-	out.backroom = wav(_backroom(), true)
-	out.tension = wav(_tension(), true)
-	out.muzak = wav(_muzak(), true)
+	for part in PARTS:
+		out.merge(make_part(part))
+	return out
+
+
+## One share of the sounds. Sfx makes the shares side by side on worker
+## threads (each with its own Synth), so the first sound can play sooner:
+## 0 = voices and effects, 1 = the store muzak, 2 = the other loops.
+func make_part(part: int) -> Dictionary:
+	var out := {}
+	match part:
+		0:
+			# Voice blips: one short syllable per variant, pitched around the voice.
+			var steps := [0.9, 0.96, 1.0, 1.05, 1.1, 1.16]
+			for v in VOICES.keys():
+				var p: Array = VOICES[v]
+				for k in BLIP_VARIANTS:
+					out["blip_%s_%d" % [v, k]] = wav(_blip(p[0], p[1] * steps[k], p[2], p[3], p[4], v == "pa"))
+			out.step = wav(_gain(noise(0.035, 4200.0, 0.001, 0.008, 0.5, 900.0), 1.0))
+			out.jump = wav(tone(0.14, 330.0, 760.0, "tri", 0.004, 0.06, 0.45))
+			out.land = wav(_mix(tone(0.12, 150.0, 70.0, "sine", 0.002, 0.04, 0.8), noise(0.08, 1800.0, 0.001, 0.02, 0.35)))
+			out.crack = wav(_crack())
+			out.splat = wav(_splat())
+			out.bounce = wav(tone(0.32, 210.0, 520.0, "sine", 0.004, 0.12, 0.6, 0.06))
+			out.chime = wav(_mix(bell(1.6, 659.25, 0.45, 0.5), bell(1.4, 523.25, 0.45, 0.55), 0.42))
+			out.beep = wav(tone(0.09, 1180.0, 1180.0, "square", 0.002, 0.05, 0.25))
+			out.alert = wav(_alert())
+			out.thud = wav(_thud())
+			out.whoosh = wav(_whoosh())
+			out.grab = wav(_mix(tone(0.16, 900.0, 300.0, "tri", 0.002, 0.05, 0.3), tone(0.2, 90.0, 50.0, "sine", 0.002, 0.08, 0.7)))
+			out.clunk = wav(_clunk())
+			out.ui_move = wav(tone(0.05, 880.0, 940.0, "sine", 0.002, 0.02, 0.25))
+			out.ui_ok = wav(_mix(tone(0.12, 660.0, 660.0, "tri", 0.003, 0.05, 0.3), tone(0.16, 990.0, 990.0, "tri", 0.003, 0.06, 0.3), 0.06))
+			out.objective = wav(_mix(bell(1.0, 784.0, 0.32, 0.4), bell(1.0, 1046.5, 0.32, 0.4), 0.13))
+			out.checkpoint = wav(_arp([523.25, 659.25, 783.99], 0.09, 0.32))
+			out.scrap = wav(_arp([783.99, 987.77, 1174.66, 1567.98], 0.07, 0.28))
+			out.sting = wav(_sting())
+			out.reveal = wav(_reveal())
+			out.door = wav(_door())
+			out.chomp = wav(_chomp())
+			out.boo = wav(_mix(tone(0.5, 300.0, 180.0, "saw", 0.02, 0.25, 0.25), tone(0.5, 303.0, 182.0, "saw", 0.02, 0.25, 0.25)))
+			out.cheer = wav(_cheer())
+			out.gasp = wav(_gasp())
+			out.snap = wav(_mix(noise(0.12, 9000.0, 0.0003, 0.012, 1.0, 1800.0), tone(0.25, 2400.0, 900.0, "tri", 0.001, 0.05, 0.5)))
+			out.slam = wav(_slam())
+			out.alarm = wav(_alarm())
+			out.hiss = wav(noise(0.9, 6000.0, 0.02, 0.45, 0.4, 1500.0))
+		1:
+			out.muzak = wav(_muzak(), true)
+		2:
+			out.hum_fridge = wav(_hum(4.0, 60.0, 0.28, 900.0), true)
+			out.hum_store = wav(_hum(4.0, 120.0, 0.12, 500.0), true)
+			out.hum_back = wav(_hum(4.0, 50.0, 0.22, 420.0), true)
+			out.machine = wav(_machine(), true)
+			out.backroom = wav(_backroom(), true)
+			out.tension = wav(_tension(), true)
 	return out
 
 
