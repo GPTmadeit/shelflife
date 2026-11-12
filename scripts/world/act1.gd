@@ -609,11 +609,12 @@ func _build_triggers() -> void:
 		func(): return Game.flag("gary_restocked"))
 	_trigger("sermon", Rect2(8.0, 1.5, 20.0, 2.5), func(): runner.run("sermon"),
 		func(): return not Game.flag("sermon_done"))
-	_trigger("virgin", Rect2(36.6, -0.5, 3.0, 3.0), func(): runner.run("virgin_meet"),
+	# (these three were narrow enough to jump clean over; now they span what you land on)
+	_trigger("virgin", Rect2(36.6, -0.5, 9.2, 3.0), func(): runner.run("virgin_meet"),
 		func(): return not Game.flag("met_virgin"))
-	_trigger("beans", Rect2(45.5, -0.5, 3.5, 2.5), func(): runner.run("beans_hint"),
+	_trigger("beans", Rect2(45.5, -0.5, 6.5, 2.5), func(): runner.run("beans_hint"),
 		func(): return not Game.flag("met_beans"))
-	_trigger("cp_bakery", Rect2(92.5, -0.5, 3.0, 4.0), func(): _checkpoint("bakery"),
+	_trigger("cp_bakery", Rect2(92.5, -0.5, 8.0, 4.0), func(): _checkpoint("bakery"),
 		func(): return Game.checkpoint in ["start", "yogurt", "floor", "narc"])
 	_trigger("rolls_hello", Rect2(93.0, -0.5, 4.0, 5.0), func(): actors.rolls.bubble("Ooooh! Fresh meat!"))
 	_trigger("dot", Rect2(116.6, -0.5, 8.0, 6.0), func(): runner.run("dot_meet"),

@@ -2,6 +2,10 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.2.3 (2026-11-12)
+
+- In Act One, three story moments could be jumped clean over: meeting Her Holiness, Beans's warning about the Narc, and the bakery checkpoint. Their zones now cover wherever you can land.
+
 ## 0.2.2 (2026-11-12)
 
 Fixes from a closer playtest of Act Two.
