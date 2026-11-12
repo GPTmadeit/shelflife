@@ -1,4 +1,4 @@
 extends RefCounted
 ## Single source of truth for the game version (keep project.godot in sync).
 
-const VERSION := "0.2.0"
+const VERSION := "0.2.1"

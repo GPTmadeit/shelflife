@@ -2,6 +2,10 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.2.1 (2026-11-12)
+
+- The last shot of Act Two now shows Baker and Dot looking out at the store, instead of hiding them behind the dialogue box.
+
 ## 0.2.0 (2026-11-12)
 
 **Act Two: Discontinued.** The story carries on behind the Employees Only doors, about 15 minutes of new game. Finish Act One and it starts by itself, or pick it from the title screen once Act One is done.

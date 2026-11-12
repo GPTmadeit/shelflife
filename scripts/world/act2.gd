@@ -512,7 +512,7 @@ func _build_vista() -> void:
 	for y in [1.6, 7.0, 12.4]:
 		store.box(Vector3(171, y, -56.4), Vector3(43, 0.3, 3.4), Mats.solid(Color(0.76, 0.79, 0.83), 0.35, 0.55))
 		store.box(Vector3(171, y - 0.5, -54.8), Vector3(43, 0.08, 0.14), Mats.glow(Color(0.82, 0.92, 1.0), 2.4))
-	store.label("DAIRY", Vector3(171, 25.0, -57.6), 5.0, Color(0.62, 0.86, 1.0), 14, Color(0.04, 0.08, 0.16))
+	store.label("DAIRY", Vector3(171, 18.6, -55.8), 4.4, Color(0.62, 0.86, 1.0), 14, Color(0.04, 0.08, 0.16))
 	store.row("jug", 152.0, 190.0, 1.75, -56.6, 2.05, [Color(0.95, 0.95, 0.97)], [Color(0.85, 0.15, 0.15), Color(0.2, 0.42, 0.9)])
 	store.row("eggbox", 160.0, 182.0, 7.15, -56.6, 3.9, [Color(0.93, 0.93, 0.9)], [Color(0.55, 0.7, 0.85)])
 	store.row("tub", 152.0, 190.0, 12.55, -56.6, 1.9, [Color(0.25, 0.5, 0.9)], [Color(0.95, 0.95, 0.95)])
@@ -807,8 +807,8 @@ func _ev_flaps() -> void:
 	player.rig.facing = PI
 	actors.dot.rigs[0].facing = PI
 	var tw := create_tween()
-	tw.tween_property(player, "global_position", Vector3(170.3, 0.0, -11.6), 2.6)
-	tw.parallel().tween_property(actors.dot, "global_position", Vector3(172.9, 0.0, -11.0), 2.6)
+	tw.tween_property(player, "global_position", Vector3(170.0, 0.0, -13.2), 2.8)
+	tw.parallel().tween_property(actors.dot, "global_position", Vector3(173.2, 0.0, -12.8), 2.8)
 	get_tree().create_timer(1.0).timeout.connect(func():
 		Sfx.play("whoosh", -6.0, 0.7)
 		for i in _strips.size():
@@ -822,7 +822,8 @@ func _ev_flaps() -> void:
 	_vista_light.visible = true
 	Sfx.music_stop(0.6)
 	Sfx.play("sting", -4.0)
-	cam.shot(Vector3(171.5, 2.3, -4.9), Vector3(171.3, 6.6, -50.0), true)
+	# low, looking up past the two of them at the lit store
+	cam.shot(Vector3(171.5, 0.9, -4.9), Vector3(171.4, 4.2, -50.0), true)
 	tyler.visible = true
 	tyler.global_position = Vector3(140.0, 0.0, -47.0)
 	tyler.walk_to(162.0, 7.0)
