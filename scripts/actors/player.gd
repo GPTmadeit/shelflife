@@ -18,6 +18,7 @@ const MAX_FALL := 34.0
 const CRACK_H := 3.5
 const SPLAT_H := 8.6
 const JUMP_SHARE := 0.35       ## how much of a jump's own height counts toward a hard landing
+const BOOST_H := 4.3           ## a jump off Dot's back
 const MAX_CRACKS := 3
 
 signal cracked(n: int)
@@ -36,6 +37,7 @@ var _coyote := 0.0
 var _buffer := 0.0
 var _peak_y := 0.0
 var _takeoff_y := 0.0         ## height of the last ground we stood on
+var _on_boost := false        ## standing on something springy (Dot)
 var _shadow_mat: StandardMaterial3D
 var _shadow_size := Vector3.ONE
 var _step_t := 0.0
@@ -98,7 +100,9 @@ func _physics_process(dt: float) -> void:
 	else:
 		_buffer -= dt
 	if _buffer > 0.0 and _coyote > 0.0:
-		velocity.y = sqrt(2.0 * GRAVITY * JUMP_H)
+		velocity.y = sqrt(2.0 * GRAVITY * (BOOST_H if _on_boost else JUMP_H))
+		if _on_boost and level != null:
+			level.on_boost()
 		_buffer = 0.0
 		_coyote = 0.0
 		rig.hop_stretch()
@@ -113,6 +117,7 @@ func _physics_process(dt: float) -> void:
 	move_and_slide()
 	position.z = 0.0
 	var now_floor := is_on_floor()
+	_on_boost = now_floor and _touching("boost")
 	if not now_floor:
 		_peak_y = maxf(_peak_y, global_position.y)
 	elif not on_floor:
@@ -167,12 +172,18 @@ func _on_land() -> void:
 	var impact := (_takeoff_y - global_position.y) + JUMP_SHARE * (_peak_y - _takeoff_y)
 	_peak_y = global_position.y
 	_takeoff_y = global_position.y
-	var cushion := false
-	for i in get_slide_collision_count():
-		var c := get_slide_collision(i).get_collider()
-		if c != null and c.has_meta("cushion"):
-			cushion = true
+	var cushion := _touching("cushion")
 	landed.emit(drop)
+	if _on_boost and not locked and (Input.is_action_pressed("jump") or _bot_hold > 0.0):
+		# landing on Dot with jump held: straight back up, higher
+		velocity.y = sqrt(2.0 * GRAVITY * BOOST_H)
+		rig.land(1.5)
+		Sfx.play("bounce", -3.0, randf_range(0.8, 0.9))
+		if level != null:
+			level.on_boost()
+		return
+	if _on_boost and level != null:
+		level.on_boost()
 	if cushion and drop > 0.9:
 		velocity.y = clampf(drop * 2.2, 7.0, 13.5)
 		rig.land(1.3)
@@ -233,6 +244,15 @@ func respawn(pos: Vector3, keep_cracks := 0) -> void:
 	alive = true
 	_peak_y = pos.y
 	_takeoff_y = pos.y
+
+
+## Is one of the things we're resting against tagged with this meta?
+func _touching(tag: String) -> bool:
+	for i in get_slide_collision_count():
+		var c := get_slide_collision(i).get_collider()
+		if c != null and c.has_meta(tag):
+			return true
+	return false
 
 
 ## Little dust puffs kicked up from the feet.

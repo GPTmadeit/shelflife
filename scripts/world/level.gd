@@ -67,6 +67,12 @@ var hazards: Array = []        ## {rect, reason, on: Callable}
 var scraps := {}               ## this act's scraps (see scraps.gd)
 var scrap_nodes := {}
 var dot_follow := false
+var dot_planted := false       ## Dot is lying down as a cushion (see "Dot, the cushion")
+var _dot_busy := false         ## she's mid-hop: no new orders
+var _dot_pad: StaticBody3D
+var _plant := Vector3.ZERO     ## where she lay down
+var _plant_under := false      ## ...which was under Baker's own feet
+var _dot_quip_t := 0.0
 var auto_face := true          ## dialogue turns speakers toward each other (off in staged shots)
 var _trail: Array[Vector3] = []
 var _trail_t := 0.0
@@ -378,6 +384,8 @@ func _build_ui() -> void:
 func on_dialogue_start() -> void:
 	player.locked = true
 	hud.prompt_hide()
+	hud.hint_hide()
+	_dot_recall(true)
 
 
 func on_dialogue_end() -> void:
@@ -613,6 +621,7 @@ func _on_died(reason: String) -> void:
 
 
 func _respawn() -> void:
+	_dot_recall(true)
 	var cp: Vector3 = checkpoints.get(Game.checkpoint, checkpoints.start)
 	player.set_physics_process(true)
 	player.respawn(cp)
@@ -654,13 +663,222 @@ func _process(dt: float) -> void:
 	_update_prompt()
 	if cam.mode == "follow":
 		cam.dist_override = _cam_zone()
+		# with Dot waiting below a drop, look down far enough to see her
+		var down := 0.0
+		if dot_planted and not _plant_under and _plant.y < player.global_position.y - 1.5:
+			down = -minf(player.global_position.y - _plant.y, 8.0) * 0.45
+		cam.height_bias = move_toward(cam.height_bias, down, dt * 6.0)
 	_tick(dt)
+	if Input.is_action_just_pressed("call"):
+		_dot_call()
 	if not Game.busy and player.alive and not player.locked and Input.is_action_just_pressed("interact") and _interact_target != null:
 		var node: String = _interact_target.get("talk_node")
 		if node != "" and runner.has(node):
 			runner.run(node)
 	if player.alive and player.global_position.y < -5.0:
 		player.die("splat")
+
+
+# --- Dot, the cushion ---------------------------------------------------------------------------
+# Whistle (the "call" action) and Dot lies down for Baker: something soft to
+# land on from any height, and a higher jump off her back. On level ground she
+# slides in under his feet; at a drop (or a step up) she goes on ahead and
+# waits below. Whistle again, walk off, or start talking, and she gets up.
+
+const DOT_PLANT := ["Fine. FINE.", "Make it quick, Humpty.", "The things I do for dairy.", "Don't look down my hole."]
+const DOT_BOUNCE := ["Oof.", "Watch the glaze!", "You're heavier than you look.", "I felt that in my hole.", "Again? Really?", "Hnf."]
+const DOT_NO := ["Not there.", "Nope. No floor, no donut."]
+
+func _dot_call() -> void:
+	if not dot_follow or Game.busy or not player.alive or player.locked or _dot_busy:
+		return
+	var dot: Node3D = actors.dot
+	if dot_planted:
+		var on_her: bool = player.is_on_floor() and absf(player.global_position.x - dot.global_position.x) < 1.0 \
+			and absf(player.global_position.y - (_plant.y + 0.45)) < 0.3
+		if on_her:
+			dot.bubble("Get OFF me first.", 2.2)
+		else:
+			_dot_recall()
+		return
+	if not _companion_ok():
+		if Game.dev.has("trace"):
+			print("DOT is busy")
+		dot.bubble("Little busy, Humpty!", 2.2)
+		return
+	if not player.is_on_floor():
+		return
+	var spot := _dot_spot()
+	if spot == Vector3.INF:
+		if Game.dev.has("trace"):
+			print("DOT refuses")
+		dot.bubble(DOT_NO[_rng.randi() % DOT_NO.size()], 2.2)
+		return
+	_dot_plant(spot)
+
+
+## Where she'd lie. Vector3.INF if there's nowhere. Sets _plant_under.
+func _dot_spot() -> Vector3:
+	var space := get_world_3d().direct_space_state
+	var p := player.global_position
+	var dir: float = player.facing_dir
+	_plant_under = false
+	var own := _dot_ground(space, p.x, p.y)
+	# what's ahead? She can hop a rail or onto a pallet, not through a wall.
+	var reach := 1.7
+	var q := PhysicsRayQueryParameters3D.create(p + Vector3(0, 1.5, 0), p + Vector3(dir * (reach + 0.6), 1.5, 0))
+	q.exclude = [player.get_rid()]
+	var wall := space.intersect_ray(q)
+	if not wall.is_empty():
+		reach = absf(wall.position.x - p.x) - 0.9
+	if reach > 0.8:
+		var ahead := _dot_ground(space, p.x + dir * reach, p.y)
+		if ahead != Vector3.INF and absf(ahead.y - p.y) >= 0.6:
+			return ahead   # a drop, or a step up: she goes on ahead
+	if own != Vector3.INF:
+		_plant_under = true   # level ground: right under his feet
+	return own
+
+
+## The ground at x, looking down from a little above height y: a spot she
+## could lie on, or Vector3.INF.
+func _dot_ground(space: PhysicsDirectSpaceState3D, x: float, y: float) -> Vector3:
+	var from := Vector3(x, y + 2.5, 0)
+	var q := PhysicsRayQueryParameters3D.create(from, from + Vector3(0, -18.0, 0))
+	q.exclude = [player.get_rid()]
+	q.hit_from_inside = true
+	var hit := space.intersect_ray(q)
+	if hit.is_empty() or hit.normal.y < 0.7 or hit.position.y > y + 1.3:
+		return Vector3.INF
+	var body: Object = hit.collider
+	if body == _dot_pad:
+		return Vector3.INF
+	if body is StaticBody3D and (body as StaticBody3D).constant_linear_velocity.length() > 0.01:
+		return Vector3.INF   # not on a moving belt
+	var here := Vector2(x, hit.position.y + 0.4)
+	for h in hazards:
+		if h.rect.grow(0.4).has_point(here):
+			return Vector3.INF   # nor on a mousetrap
+	return Vector3(x, hit.position.y, 0)
+
+
+func _dot_plant(spot: Vector3) -> void:
+	var dot: Node3D = actors.dot
+	dot_planted = true
+	_dot_busy = true
+	_plant = spot
+	dot.bubble(DOT_PLANT[_rng.randi() % DOT_PLANT.size()], 2.4)
+	Sfx.play("jump", -8.0, 0.75)
+	var r: Node3D = dot.rigs[0]
+	# her feet go where her head will end up; tipped over, the ring lies on the lane
+	var feet := Vector3(spot.x, spot.y, 0.1 + r.leg_len + r.h * 0.5)
+	var fall: float = maxf(0.0, dot.global_position.y - spot.y)
+	await dot.hop_to(feet, 1.3 + fall * 0.12, 0.38 + fall * 0.035)
+	_dot_busy = false
+	if not dot_planted:
+		return   # called off while she was in the air
+	dot.face_dir(0.0)
+	r.speed = 0.0
+	r.lie_down(true)
+	dot.set_emotion("deadpan")
+	Sfx.play("land", -6.0, 0.8)
+	if Game.dev.has("trace"):
+		print("DOT lies down at (%.1f, %.1f) under=%s" % [spot.x, spot.y, _plant_under])
+	# she slid in under him: he's bumped up onto her back
+	if _plant_under and player.alive and player.is_on_floor() and absf(player.global_position.x - spot.x) < 0.8 \
+			and absf(player.global_position.y - spot.y) < 0.2:
+		_pad(true)
+		_dot_pad.global_position = Vector3(spot.x, spot.y + 0.225, 0)
+		player.global_position.y = spot.y + 0.47
+		player.velocity.y = 0.0
+		player.rig.land(0.7)
+
+
+## Gets her up. `quick`: at once, no hop (a conversation or a respawn is starting).
+func _dot_recall(quick := false) -> void:
+	if not dot_planted:
+		return
+	dot_planted = false
+	_pad(false)
+	if Game.dev.has("trace"):
+		print("DOT gets up (quick=%s)" % quick)
+	var dot: Node3D = actors.dot
+	var r: Node3D = dot.rigs[0]
+	r.lie_down(false, quick)
+	dot.set_emotion("neutral")
+	_trail.clear()
+	if quick or _dot_busy:
+		dot.global_position.z = -0.3
+		return
+	_dot_busy = true
+	var to: Vector3 = player.global_position + Vector3(-1.6 * player.facing_dir, 0, -0.3)
+	var rise: float = absf(to.y - dot.global_position.y)
+	await dot.hop_to(to, 1.2 + rise * 0.2, 0.36 + rise * 0.03)
+	_dot_busy = false
+
+
+## The springy collider on her back. It only switches on once Baker is clear of it.
+func _pad(on: bool) -> void:
+	if _dot_pad == null:
+		_dot_pad = store.collider(Vector3(0, -200, 0), Vector3(1.5, 0.45, Store.LANE), {"cushion": true, "boost": true})
+	_dot_pad.collision_layer = 1 if on else 0
+	if not on:
+		_dot_pad.position.y = -200.0
+
+
+func _update_planted(dt: float) -> void:
+	var dot: Node3D = actors.dot
+	var p := player.global_position
+	var top := _plant.y + 0.45
+	# too far to be any use: she comes along
+	if absf(p.x - _plant.x) > 12.0 or p.y < _plant.y - 5.0:
+		_dot_recall()
+		return
+	# an egg in the air nearby: she shuffles over to get under it
+	var x: float = dot.global_position.x
+	if not _plant_under and not player.is_on_floor() and p.y > top + 1.6 and absf(p.x - _plant.x) < 6.5:
+		var want: float = move_toward(x, clampf(p.x, _plant.x - 5.5, _plant.x + 5.5), dt * 10.0)
+		if want != x and _dot_can_shuffle(x, want):
+			x = want
+			dot.global_position.x = x
+	var clear: bool = absf(p.x - x) > 1.15 or p.y >= top - 0.05
+	if _dot_pad == null or _dot_pad.collision_layer == 0:
+		if clear:
+			_pad(true)
+	if _dot_pad != null and _dot_pad.collision_layer != 0:
+		_dot_pad.global_position = Vector3(x, _plant.y + 0.225, 0)
+	_dot_quip_t -= dt
+
+
+## Can she slide from x0 to x1 along the ground she lies on? (Nothing in the
+## way, and still the same floor under her.)
+func _dot_can_shuffle(x0: float, x1: float) -> bool:
+	var space := get_world_3d().direct_space_state
+	var side := signf(x1 - x0)
+	var q := PhysicsRayQueryParameters3D.create(Vector3(x0, _plant.y + 0.3, 0), Vector3(x1 + side * 0.8, _plant.y + 0.3, 0))
+	q.exclude = [player.get_rid(), _dot_pad.get_rid()] if _dot_pad != null else [player.get_rid()]
+	if not space.intersect_ray(q).is_empty():
+		return false
+	var q2 := PhysicsRayQueryParameters3D.create(Vector3(x1 + side * 0.6, _plant.y + 0.5, 0), Vector3(x1 + side * 0.6, _plant.y - 0.3, 0))
+	q2.exclude = q.exclude
+	var under := space.intersect_ray(q2)
+	return not under.is_empty() and absf(under.position.y - _plant.y) < 0.12
+
+
+## Baker landed on her, or jumped off her.
+func on_boost() -> void:
+	if not dot_planted:
+		return
+	var dot: Node3D = actors.dot
+	dot.rigs[0].dip()
+	if _dot_quip_t <= 0.0 and _rng.randf() < 0.7:
+		_dot_quip_t = 2.5
+		dot.bubble(DOT_BOUNCE[_rng.randi() % DOT_BOUNCE.size()], 1.8)
+
+
+## The whistle, along the bottom of the screen.
+func _ev_dot_hint() -> void:
+	hud.hint("%s  whistle for Dot:  a boost on flat ground,  a soft landing below a drop." % Game.glyph("call"), 11.0)
 
 
 func _update_hide() -> void:
@@ -673,7 +891,10 @@ func _update_hide() -> void:
 
 
 func _update_follow(dt: float) -> void:
-	if not dot_follow:
+	if not dot_follow or _dot_busy:
+		return
+	if dot_planted:
+		_update_planted(dt)
 		return
 	var dot: Node3D = actors.dot
 	_trail_t -= dt

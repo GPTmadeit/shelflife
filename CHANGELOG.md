@@ -2,6 +2,16 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.4.0 (2026-11-12)
+
+**Dot earns her keep.** Once she's with you, whistle (Q or F, or Y on a gamepad) and she lies down for you.
+
+- On level ground she slides in under your feet. A jump off her back goes about half again as high as a normal one, and holding jump keeps you bouncing.
+- At a drop she goes down first and waits below, and shuffles over to get under you as you fall. Landing on her never cracks your shell, from any height.
+- Whistle again, walk away or start talking, and she gets up and follows. She won't lie down on a moving belt or a mousetrap, and she's too busy during the run across the Baler.
+- Act Two has two places built for it. A Planogram scrap now sits on a step stool in the breakroom that only a boost reaches. The stockroom conveyor now ends on a steel landing with a long drop to the floor; the flour sacks that used to break your fall are stacked out of the way.
+- She tells you about it when she joins you in Act One, and again at both of those places.
+
 ## 0.3.0 (2026-11-12)
 
 How the game feels, and how fast it runs.

@@ -96,6 +96,7 @@ var _glance := Vector2.ZERO
 var _face_amt := 1.0
 var _emote_tween: Tween
 var _crack_nodes: Array[Node3D] = []
+var lying := false                 ## flat on its back (Dot as a cushion)
 var _rng := RandomNumberGenerator.new()
 
 
@@ -640,6 +641,38 @@ func set_product(on: bool) -> void:
 	product = on
 
 
+## Lies flat on its back, face up (or gets back up). The body tips over
+## around the feet, so the owner should stand the rig where its head will go.
+func lie_down(on: bool, instant := false) -> void:
+	lying = on
+	if _emote_tween:
+		_emote_tween.kill()
+	var rot := -PI * 0.5 if on else 0.0
+	var lift := (_lie_lift() if on else 0.0)
+	if instant:
+		body_pivot.rotation = Vector3(rot, 0, 0)
+		body_pivot.position = Vector3(0, lift, 0)
+		return
+	var tw := create_tween()
+	_emote_tween = tw
+	tw.tween_property(body_pivot, "rotation", Vector3(rot, 0, 0), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tw.parallel().tween_property(body_pivot, "position", Vector3(0, lift, 0), 0.22)
+
+
+## How far to lift the tipped-over body so it rests on the ground.
+func _lie_lift() -> float:
+	return 0.19 * h if kind == "donut" else 0.3 * h
+
+
+## A quick dip when something lands on it while it lies there.
+func dip() -> void:
+	if not lying:
+		return
+	var tw := create_tween()
+	tw.tween_property(body_pivot, "position:y", _lie_lift() * 0.45, 0.05)
+	tw.tween_property(body_pivot, "position:y", _lie_lift(), 0.16).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
 func set_cracks(n: int) -> void:
 	cracks = n
 	while _crack_nodes.size() < n and _crack_nodes.size() < 3:
@@ -807,7 +840,7 @@ func _process(dt: float) -> void:
 	if not grounded:
 		air = clampf(-vy * 0.006, -0.08, 0.1) * -1.0
 	var sq := clampf(_squash + air, -0.3, 0.35)
-	body_pivot.scale = Vector3(1.0 + sq * 0.55, 1.0 - sq, 1.0 + sq * 0.55)
+	body_pivot.scale = Vector3(1.0 + sq * 0.55, 1.0 - sq, 1.0 + sq * 0.55) if not lying else Vector3.ONE
 	# product mode: the face and limbs tuck away
 	_face_amt = move_toward(_face_amt, 0.0 if product else 1.0, dt * 4.0)
 	var fa := ease(_face_amt, 0.5)

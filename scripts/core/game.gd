@@ -310,6 +310,7 @@ func _setup_input() -> void:
 	_bind("interact", [_key(KEY_E), _key(KEY_ENTER), _key(KEY_KP_ENTER), _pad(JOY_BUTTON_X)])
 	_bind("advance", [_key(KEY_SPACE), _key(KEY_E), _key(KEY_ENTER), _key(KEY_KP_ENTER), _pad(JOY_BUTTON_A), _pad(JOY_BUTTON_X)])
 	_bind("pause", [_key(KEY_ESCAPE), _key(KEY_P), _pad(JOY_BUTTON_START)])
+	_bind("call", [_key(KEY_Q), _key(KEY_F), _pad(JOY_BUTTON_Y)])
 
 
 ## Button glyph for an action, matching the device the player last touched.
@@ -324,4 +325,6 @@ func glyph(action: String) -> String:
 			return "A" if pad else "Space"
 		"pause":
 			return "Start" if pad else "Esc"
+		"call":
+			return "Y" if pad else "Q"
 	return action

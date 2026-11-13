@@ -55,7 +55,7 @@ func _ready() -> void:
 		Sfx.stop_all_ambience(0.3)
 		Sfx.music_stop(0.3)
 		Game.go_title())
-	var controls := Kit.label("Move  A/D or ←/→   ·   Jump  Space   ·   Talk  E   ·   Hold Space to fast-forward talk   ·   Pause  Esc", 18, Color(0.65, 0.63, 0.6), Kit.body_font(600))
+	var controls := Kit.label("Move  A/D or ←/→   ·   Jump  Space   ·   Talk  E   ·   Whistle for Dot  Q   ·   Hold Space to fast-forward talk   ·   Pause  Esc", 18, Color(0.65, 0.63, 0.6), Kit.body_font(600))
 	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	v.add_child(controls)
 	_settings = SettingsPanel.new()

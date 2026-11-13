@@ -159,11 +159,16 @@ func _build_breakroom() -> void:
 	_build_sheet()
 	_build_vending()
 	_build_fridge()
-	# a milk crate somebody stands on to reach the top shelf
-	var crate := Mats.skin(Color(0.2, 0.35, 0.75), 0.6)
-	store.box(Vector3(32.75, 1.1, -0.4), Vector3(2.5, 2.16, 2.6), crate, 0.08)
-	store.box(Vector3(32.75, 1.1, 0.92), Vector3(1.6, 0.9, 0.04), Mats.solid(Color(0.1, 0.18, 0.4), 0.7))
-	store.solid_lane(31.5, 34.0, 0.0, 2.2)
+	# A step stool somebody uses to reach the top shelf. An egg can walk under
+	# it; only a jump off Dot's back gets one onto the step.
+	var stool_red := Mats.skin(Color(0.78, 0.14, 0.12), 0.5)
+	var stool_leg := Mats.solid(Color(0.7, 0.72, 0.76), 0.3, 0.8)
+	store.platform(31.2, 34.8, 4.3, 0.32, stool_red, -2.3, 0.9, 0.1)
+	store.box(Vector3(33.0, 4.31, -0.7), Vector3(3.1, 0.04, 2.7), Mats.solid(Color(0.08, 0.08, 0.09), 0.9))
+	for side in [-1.0, 1.0]:
+		for lz in [-2.15, 0.75]:
+			store.mesh(Meshes.cyl(0.11, 0.11, 4.1, 8), stool_leg, Vector3(33.0 + side * 1.95, 2.0, lz), Vector3(0, 0, side * 0.13))
+		store.box(Vector3(33.0 + side * 2.05, 1.3, -0.7), Vector3(0.1, 0.1, 2.9), stool_leg)
 
 
 ## The printout that came off the wall: the new Planogram, dairy section.
@@ -326,24 +331,28 @@ func _build_stockroom() -> void:
 	for k in 4:
 		var b := store.box(Vector3(96.0 + k * 4.2, BELT_Y + 0.7, -1.9), Vector3(1.9, 1.4, 1.5), Mats.solid(card[k % 3], 0.9))
 		riders.append(b)
-	# flour sacks to land on
+	# The line ends on a steel landing with a rail across it, and the floor is a
+	# long way down for an egg: this is where Dot goes first.
+	var deck := Mats.solid(Color(0.5, 0.52, 0.56), 0.4, 0.6)
+	store.platform(112.0, 118.0, BELT_Y, 0.35, deck, -2.9, 0.9)
+	for lx in [112.5, 117.6]:
+		for lz in [-2.7, 0.7]:
+			store.box(Vector3(lx, (BELT_Y - 0.35) * 0.5, lz), Vector3(0.3, BELT_Y - 0.35, 0.3), deck)
+	var rail := Mats.solid(Color(0.95, 0.78, 0.1), 0.5)
+	for lz in [-2.8, 0.8]:
+		store.box(Vector3(117.85, BELT_Y + 0.5, lz), Vector3(0.2, 1.0, 0.2), rail)
+	for ry in [0.5, 0.95]:
+		store.box(Vector3(117.85, BELT_Y + ry, -1.0), Vector3(0.14, 0.14, 3.8), rail)
+	store.solid_lane(117.7, 118.0, BELT_Y, BELT_Y + 1.0)
+	# flour sacks, stacked out of the way
 	var sack := Mats.skin(Color(0.9, 0.86, 0.74), 0.95)
-	for k in 2:
+	for k in 3:
 		var s := MeshInstance3D.new()
-		s.mesh = Meshes.rounded_box(Vector3(4.6, 0.95, 3.0), 0.42, 3)
+		s.mesh = Meshes.rounded_box(Vector3(4.4, 0.95, 2.6), 0.42, 3)
 		s.material_override = sack
-		s.position = Vector3(114.7 + k * 0.2, 0.45 + k * 0.78, -0.4)
+		s.position = Vector3(114.6 + (k % 2) * 0.3, 0.45 + k * 0.8, -3.6)
 		add_child(s)
-	store.solid_lane(112.5, 116.9, 0.0, 1.6, {"cushion": true})
-	# one more on the floor, for anyone who leaps off the end of the line
-	var s3 := MeshInstance3D.new()
-	s3.mesh = Meshes.rounded_box(Vector3(3.1, 0.9, 2.9), 0.4, 3)
-	s3.material_override = sack
-	s3.position = Vector3(118.4, 0.42, -0.3)
-	s3.rotation.y = 0.08
-	add_child(s3)
-	store.solid_lane(116.9, 119.9, 0.0, 0.8, {"cushion": true})
-	var fl: Label3D = store.label("FLOUR", Vector3(114.9, 1.2, 1.12), 0.42, Color(0.3, 0.35, 0.6))
+	var fl: Label3D = store.label("FLOUR", Vector3(114.7, 1.25, -2.28), 0.42, Color(0.3, 0.35, 0.6))
 	fl.outline_size = 0
 
 
@@ -616,6 +625,16 @@ func _build_triggers() -> void:
 	# (each zone is wider than a full jump, so nobody sails over the story)
 	_trigger("planogram", Rect2(8.6, -0.5, 8.6, 2.0), func(): runner.run("a2_planogram"),
 		func(): return not Game.flag("a2_planogram"))
+	_trigger("stool", Rect2(27.2, -0.5, 3.6, 2.0), func():
+		Game.set_flag("a2_stool_hint")
+		actors.dot.bubble("Scrap up on that stool. Whistle, and I'll give you a boost.", 4.5)
+		hud.hint("%s  whistle: Dot slides in under you. Then jump, and hold it." % Game.glyph("call"), 11.0),
+		func(): return not Game.flag("a2_stool_hint") and not Game.scraps.has("b2"))
+	_trigger("drop", Rect2(113.6, 4.2, 4.2, 1.0), func():
+		Game.set_flag("a2_drop_hint")
+		actors.dot.bubble("That's a long way down for an egg. Whistle. I'll go first.", 4.5)
+		hud.hint("%s  whistle: Dot goes down first. Then drop onto her." % Game.glyph("call"), 11.0),
+		func(): return not Game.flag("a2_drop_hint"))
 	_trigger("saul", Rect2(51.6, -0.5, 6.0, 2.0), func(): runner.run("a2_saul"),
 		func(): return not Game.flag("a2_saul"))
 	_trigger("kernel", Rect2(80.3, 0.7, 8.9, 1.0), func(): runner.run("a2_kernel"),
@@ -668,7 +687,7 @@ func _companion_ok() -> bool:
 
 func _cam_zone() -> float:
 	var x := player.global_position.x
-	if x > 88.0 and x < 114.0:
+	if x > 88.0 and x < 119.5:
 		return 16.5
 	if x > 129.0 and x < 166.0:
 		return 18.0

@@ -66,11 +66,15 @@ godot --path .
 | Move | A / D or ← / → | Left stick / D-pad |
 | Jump (hold for higher) | Space, W or ↑ | A |
 | Talk / advance dialogue | E or Enter (Space advances too; hold it to fast-forward) | X / A |
+| Whistle for Dot (once she's with you) | Q or F | Y |
 | Pause | Esc | Start |
 
 Eggs crack. A short drop is fine, and so is hopping off a crate; jump or fall
 off anything tall and you'll crack your shell. Three cracks and you're done.
 Bread and other soft things are safe to land on.
+
+Once Dot is with you, whistle and she lies down for you: a springboard on
+flat ground, and a soft landing at the bottom of a drop.
 
 The pause menu keeps every Planogram scrap you've found, to read again. Once
 you finish Act One, the title screen can replay either act from its start.

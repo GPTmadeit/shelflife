@@ -436,10 +436,12 @@ DOT [sly]: Alright, Humpty. Let's go see a man about a Planogram.
 BAKER [dazed]: Who's Humpty?
 DOT [deadpan]: Nobody. A guy. Had a great fall. Don't worry about it.
 ~ event dot_join
+DOT [smug]: Speaking of. If you ever need a soft landing, or a boost up, whistle. I'm a donut. I've been sat on by worse.
 ~ cam off
 ~ set dot_joined
 ~ objective Get to the Employees Only doors. Dot's coming too.
 ~ checkpoint hall
+~ event dot_hint
 
 === dot_chat
 ~ cam dot baker

@@ -9,7 +9,7 @@ const ALL := {
 	"s5": [1, Vector3(119.6, 7.5, 0), "PLANOGRAM 9:12", "Blessed are the marked-down, for they shall inherit the clearance bin."],
 	"s6": [1, Vector3(134.8, 2.2, 0), "PLANOGRAM 11:30", "Thou shalt not covet thy neighbor's Facing. Unless it is an endcap. Then go nuts."],
 	"b1": [2, Vector3(-7.6, 0.0, 0), "BREAKROOM 1:1", "Thou shalt label thy food. Thou shalt not eat what is labeled. Karen, this means thee."],
-	"b2": [2, Vector3(32.75, 2.2, 0), "PLANOGRAM 2:15", "And on the seventh day, Corporate rested. The night crew did not. The night crew does not get the seventh day."],
+	"b2": [2, Vector3(33.0, 4.3, 0), "PLANOGRAM 2:15", "And on the seventh day, Corporate rested. The night crew did not. The night crew does not get the seventh day."],
 	"b3": [2, Vector3(74.6, 0.0, 0), "RECEIVING 6:9", "First in, first out. So it is written. So it is never, ever done."],
 	"b4": [2, Vector3(103.0, 5.3, 0), "PLANOGRAM 12:1", "Lift with thy legs, for thy back is not covered."],
 	"b5": [2, Vector3(139.5, 7.3, 0), "SHRINK 3:3", "Known loss is a write-off. Unknown loss is a mystery. Both are Tyler."],
