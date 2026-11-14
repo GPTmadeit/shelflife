@@ -197,9 +197,18 @@ jobs:
           api-level: 34
           arch: x86_64
           target: google_apis
+          cores: 3
+          ram-size: 3072M
+          emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
           disable-animations: true
           script: tools/android_update_test.sh dist testkit
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: android-logcat
+          path: android-logcat.txt
+          if-no-files-found: ignore
 
   publish:
     needs: [build, update-test, android-update-test]

@@ -9,7 +9,8 @@
 #   ANDROID_SERIAL=emulator-5554 tools/android_update_test.sh <dist> <testkit>
 #
 # Needs an x86_64 Android 8+ emulator (or phone) on adb, and uninstalls Shelf
-# Life from it first. The game's log goes to logcat (tag "godot").
+# Life from it first. The game's log goes to logcat (tag "godot"); when the
+# test fails, the whole device log is left in android-logcat.txt.
 set -euo pipefail
 dist=$(realpath "$1"); kit=$(realpath "$2")
 pkg=com.gptmadeit.shelflife
@@ -29,8 +30,57 @@ trap cleanup EXIT
 log() { $adb logcat -d -s godot:V; }
 fail() {
   echo "ANDROID UPDATE TEST FAILED: $1" >&2
-  log | grep -v '^-' | tail -40 >&2 || true
+  $adb logcat -d > android-logcat.txt 2> /dev/null || true
+  grep -E "godot|Godot|shelflife|AndroidRuntime|FATAL|DEBUG|libEGL|EGL_|GLES|ActivityTaskManager|ActivityManager: (Start|Kill|Process)" android-logcat.txt \
+    | grep -vE "SceneShader|Program linking|exceed GL_MAX|^\s*$" | tail -80 >&2 || true
   exit 1
+}
+
+# Where on screen a clickable thing is: Android's "isn't responding" dialog's
+# Wait button ("anr x y"), its first-time "Viewing full screen" hint's Got it
+# ("hint x y"), or else the installer's Update/Install ("button x y").
+find_button() {
+  $adb shell uiautomator dump /sdcard/shelflife-ui.xml > /dev/null 2>&1 || true
+  $adb shell cat /sdcard/shelflife-ui.xml > "$work/ui.xml" 2> /dev/null || true
+  "$py" - "$work/ui.xml" << 'PY'
+import re, sys
+xml = open(sys.argv[1], encoding="utf-8", errors="replace").read()
+def center(node):
+    x1, y1, x2, y2 = map(int, re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node).groups())
+    return "%d %d" % ((x1 + x2) // 2, (y1 + y2) // 2)
+nodes = re.findall(r"<node [^>]*>", xml)
+for node in nodes:
+    if 'resource-id="android:id/aerr_wait"' in node:
+        print("anr", center(node))
+        sys.exit()
+for node in nodes:
+    if 'resource-id="android:id/ok"' in node and 'package="android"' in node:
+        print("hint", center(node))
+        sys.exit()
+for node in nodes:
+    text = re.search(r' text="([^"]*)"', node)
+    if text and text.group(1).strip().lower() in ("update", "install") and 'clickable="true"' in node:
+        print("button", center(node))
+        sys.exit()
+PY
+}
+
+# A freshly booted emulator is busy for a minute or two: "System UI isn't
+# responding" can cover the screen, and early configuration changes (the SIM
+# showing up) can close the game before it gets going. Give it a moment, say
+# Wait to those dialogs, and start the game again if it didn't start.
+settle() {
+  for _ in $(seq "${1:-5}"); do
+    read -r kind x y <<< "$(find_button)" || true
+    if [ "${kind:-}" = anr ]; then
+      echo "(Android said something isn't responding: waiting)"
+      $adb shell input tap "$x" "$y"
+    elif [ "${kind:-}" = hint ]; then
+      echo "(Android's first-time full-screen hint: Got it)"
+      $adb shell input tap "$x" "$y"
+    fi
+    sleep 2
+  done
 }
 
 "$py" -m http.server "$port" --bind 127.0.0.1 --directory "$dist" > "$work/http.log" 2>&1 &
@@ -40,43 +90,46 @@ $adb uninstall "$pkg" > /dev/null 2>&1 || true
 $adb install "$kit/android/ShelfLife-0.0.0-x86_64.apk" > /dev/null
 # what a player allows when Android first asks: "Install unknown apps" for Shelf Life
 $adb shell appops set "$pkg" REQUEST_INSTALL_PACKAGES allow
-$adb logcat -c
+settle 10
 echo "== android: 0.0.0 -> $v"
-$adb shell am start -n "$pkg/com.godot.game.GodotAppLauncher" > /dev/null
 
 # the old version finds the update, downloads and checks it, and opens the installer
 opened=""
-for _ in $(seq 180); do
-  if log | grep -q '\[update\] open installer'; then opened=1; break; fi
-  if log | grep -q '\[update\] FAILED'; then fail "$(log | grep -m1 '\[update\] FAILED')"; fi
-  sleep 1
+for attempt in 1 2 3; do
+  $adb logcat -c
+  $adb shell am start -n "$pkg/com.godot.game.GodotAppLauncher" > /dev/null
+  for i in $(seq 150); do
+    if log | grep -q '\[update\] open installer'; then opened=1; break; fi
+    if log | grep -q '\[update\] FAILED'; then fail "$(log | grep -m1 '\[update\] FAILED')"; fi
+    if [ "$i" -ge 45 ] && ! log | grep -q '\[update\] 0.0.0 start'; then break; fi
+    sleep 1
+  done
+  [ -n "$opened" ] && break
+  echo "(the game didn't get going, attempt $attempt: starting it again)"
+  $adb shell am force-stop "$pkg"
+  settle 5
 done
 [ -n "$opened" ] || fail "the old version never opened the installer"
-log | grep -q '\[update\] 0.0.0 start' || fail "the 0.0.0 build didn't start its update check"
 log | grep -q '\[update\] install apk' || fail "the APK wasn't downloaded"
 
 # press Update (or Install) in Android's installer
-at=""
-for _ in $(seq 40); do
-  $adb shell uiautomator dump /sdcard/shelflife-ui.xml > /dev/null 2>&1 || true
-  $adb shell cat /sdcard/shelflife-ui.xml > "$work/ui.xml" 2> /dev/null || true
-  at=$("$py" - "$work/ui.xml" << 'PY'
-import re, sys
-xml = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-for node in re.findall(r"<node [^>]*>", xml):
-    text = re.search(r' text="([^"]*)"', node)
-    if text and text.group(1).strip().lower() in ("update", "install") and 'clickable="true"' in node:
-        x1, y1, x2, y2 = map(int, re.search(r'bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"', node).groups())
-        print((x1 + x2) // 2, (y1 + y2) // 2)
-        break
-PY
-)
-  [ -n "$at" ] && break
+pressed=""
+for _ in $(seq 60); do
+  read -r kind x y <<< "$(find_button)" || true
+  if [ "${kind:-}" = anr ]; then
+    echo "(Android said something isn't responding: waiting)"
+    $adb shell input tap "$x" "$y"
+  elif [ "${kind:-}" = hint ]; then
+    echo "(Android's first-time full-screen hint: Got it)"
+    $adb shell input tap "$x" "$y"
+  elif [ "${kind:-}" = button ]; then
+    $adb shell input tap "$x" "$y"
+    pressed=1
+    break
+  fi
   sleep 1
 done
-[ -n "$at" ] || fail "Android's installer never showed an Update button"
-# shellcheck disable=SC2086
-$adb shell input tap $at
+[ -n "$pressed" ] || fail "Android's installer never showed an Update button"
 
 have=""
 for _ in $(seq 120); do
@@ -90,12 +143,17 @@ $adb pull "$apk" "$work/installed.apk" > /dev/null
 [ "$(sha256sum "$work/installed.apk" | cut -d' ' -f1)" = "$want" ] || fail "the installed APK isn't the release's"
 
 # the new version starts and knows where it came from (saves and settings stay put)
-$adb logcat -c
-$adb shell am start -n "$pkg/com.godot.game.GodotAppLauncher" > /dev/null
 ok=""
-for _ in $(seq 90); do
-  if log | grep -q "\[update\] updated from 0.0.0 to $v"; then ok=1; break; fi
-  sleep 1
+for attempt in 1 2 3; do
+  $adb logcat -c
+  $adb shell am start -n "$pkg/com.godot.game.GodotAppLauncher" > /dev/null
+  for _ in $(seq 45); do
+    if log | grep -q "\[update\] updated from 0.0.0 to $v"; then ok=1; break; fi
+    sleep 1
+  done
+  [ -n "$ok" ] && break
+  $adb shell am force-stop "$pkg"
+  settle 5
 done
 [ -n "$ok" ] || fail "the new version didn't say it was updated from 0.0.0"
 $adb shell am force-stop "$pkg"

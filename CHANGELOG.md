@@ -2,6 +2,10 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.5.1 (2026-11-14)
+
+The first published release of the Android version. The game is the same as 0.5.0 (below), whose release stopped before anything was published: the test that updates the Android version on an emulator got stuck behind Android's first-time "Viewing full screen" hint. The test now dismisses that hint the way a player would.
+
 ## 0.5.0 (2026-11-13)
 
 **Shelf Life on Android, with touch controls you can rearrange.**
