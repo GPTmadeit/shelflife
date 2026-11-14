@@ -211,6 +211,11 @@ func _build_ui() -> void:
 		_settings.visible = false
 		_menu.visible = true
 		_first.grab_focus())
+	_settings.customize.connect(func():
+		_ui.visible = false
+		await Touch.edit()
+		_ui.visible = true
+		_settings.focus_first())
 	center.add_child(_settings)
 	_first.grab_focus.call_deferred()
 	Updater.changed.connect(_upd_refresh)
@@ -248,6 +253,17 @@ func _open_settings() -> void:
 	_menu.visible = false
 	_settings.visible = true
 	_settings.focus_first()
+
+
+## Android's back button: out of Settings, or out of the game.
+func go_back() -> void:
+	if _settings.visible:
+		Game.save_settings()
+		_settings.visible = false
+		_menu.visible = true
+		_first.grab_focus()
+	else:
+		get_tree().quit()
 
 
 # --- updates ----------------------------------------------------------------

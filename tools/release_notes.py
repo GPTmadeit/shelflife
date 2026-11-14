@@ -27,7 +27,8 @@ if earlier:
 manifest = json.load(open("dist/manifest.json", encoding="utf-8"))
 notes = template.replace("{{VERSION}}", version).replace("{{CHANGES}}", changes)
 for plat, entry in manifest["platforms"].items():
-    notes = notes.replace("{{%s_SIZE}}" % plat.upper(), "%.0f MB" % (entry["zip"]["size"] / 1048576))
+    download = entry.get("zip") or entry["apk"]   # what a player downloads for that system
+    notes = notes.replace("{{%s_SIZE}}" % plat.upper().replace("-", "_"), "%.0f MB" % (download["size"] / 1048576))
 leftover = re.findall(r"\{\{\w+\}\}", notes)
 if leftover:
     sys.exit(f"unfilled placeholders: {leftover}")

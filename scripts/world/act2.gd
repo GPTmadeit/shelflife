@@ -628,12 +628,12 @@ func _build_triggers() -> void:
 	_trigger("stool", Rect2(27.2, -0.5, 3.6, 2.0), func():
 		Game.set_flag("a2_stool_hint")
 		actors.dot.bubble("Scrap up on that stool. Whistle, and I'll give you a boost.", 4.5)
-		hud.hint("%s  whistle: Dot slides in under you. Then jump, and hold it." % Game.glyph("call"), 11.0),
+		hud.hint("%s: Dot slides in under you. Then jump, and hold it." % Game.cue("call", "whistle"), 11.0),
 		func(): return not Game.flag("a2_stool_hint") and not Game.scraps.has("b2"))
 	_trigger("drop", Rect2(113.6, 4.2, 4.2, 1.0), func():
 		Game.set_flag("a2_drop_hint")
 		actors.dot.bubble("That's a long way down for an egg. Whistle. I'll go first.", 4.5)
-		hud.hint("%s  whistle: Dot goes down first. Then drop onto her." % Game.glyph("call"), 11.0),
+		hud.hint("%s: Dot goes down first. Then drop onto her." % Game.cue("call", "whistle"), 11.0),
 		func(): return not Game.flag("a2_drop_hint"))
 	_trigger("saul", Rect2(51.6, -0.5, 6.0, 2.0), func(): runner.run("a2_saul"),
 		func(): return not Game.flag("a2_saul"))

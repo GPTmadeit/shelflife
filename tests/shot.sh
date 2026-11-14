@@ -15,7 +15,8 @@ xdg="$D/build/dev/xdg"
 mkdir -p "$xdg" "$(dirname "$out")"
 case "$xdg" in "$D"/build/dev/xdg) ;; *) echo "bad xdg dir: $xdg"; exit 1 ;; esac
 rm -f "$out" "$log"
-cmd="XDG_DATA_HOME=$xdg ${GAME:-godot --path $D} --resolution ${RES:-1600x900} ${GODOT_ARGS:-} -- --shot $out $secs $* > $log 2>&1"
+args=$(printf " '%s'" "$@")   # quoted, so a ; or > in an argument stays in it
+cmd="XDG_DATA_HOME=$xdg ${GAME:-godot --path $D} --resolution ${RES:-1600x900} ${GODOT_ARGS:-} -- --shot $out $secs$args > $log 2>&1"
 hyprctl dispatch "hl.dsp.exec_cmd(\"$cmd\", { workspace = \"special:shelfdev silent\" })" >/dev/null
 for _ in $(seq 1 $(( ${secs%.*} * 6 + 240 ))); do
   grep -qE "shot saved|avg fps" "$log" 2>/dev/null && break

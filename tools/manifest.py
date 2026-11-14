@@ -10,6 +10,7 @@ import sys
 
 version, engine = sys.argv[1], sys.argv[2]
 EXE = {"linux": "ShelfLife.x86_64", "windows": "ShelfLife.exe"}
+APK = {"android-arm64": "ShelfLife-android-arm64.apk", "android-x86_64": "ShelfLife-android-x86_64.apk"}
 
 
 def spec(path):
@@ -27,6 +28,9 @@ for plat, exe in EXE.items():
         "zip": spec(f"dist/ShelfLife-{plat}-x86_64.zip"),       # engine + game
         "exe": spec(f"build/{plat}/{exe}"),                     # the engine, inside the zip
     }
+for plat, apk in APK.items():
+    # Android's names its processors like the engine does: android-<Engine.get_architecture_name()>
+    manifest["platforms"][plat] = {"apk": spec(f"dist/{apk}")}
 with open("dist/manifest.json", "w") as f:
     json.dump(manifest, f, indent=2)
     f.write("\n")

@@ -14,6 +14,7 @@ var _settings: Control
 var _journal: PanelContainer
 var _journal_text: RichTextLabel
 var _journal_back: Button
+var _controls: Label
 var is_open := false
 
 
@@ -55,15 +56,22 @@ func _ready() -> void:
 		Sfx.stop_all_ambience(0.3)
 		Sfx.music_stop(0.3)
 		Game.go_title())
-	var controls := Kit.label("Move  A/D or ←/→   ·   Jump  Space   ·   Talk  E   ·   Whistle for Dot  Q   ·   Hold Space to fast-forward talk   ·   Pause  Esc", 18, Color(0.65, 0.63, 0.6), Kit.body_font(600))
-	controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(controls)
+	_controls = Kit.label("", 18, Color(0.65, 0.63, 0.6), Kit.body_font(600))
+	_controls.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_controls.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	v.add_child(_controls)
 	_settings = SettingsPanel.new()
 	_settings.visible = false
 	_settings.closed.connect(func():
 		_settings.visible = false
 		_menu.visible = true
 		_first.grab_focus())
+	_settings.customize.connect(func():
+		# lay the controls out over the game itself, not over this menu
+		_root.visible = false
+		await Touch.edit()
+		_root.visible = is_open
+		_settings.focus_first())
 	center.add_child(_settings)
 	_build_journal(center)
 	_root.visible = false
@@ -146,17 +154,24 @@ func _btn(v: VBoxContainer, text: String, fn: Callable) -> Button:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("pause") and not event.is_echo():
 		get_viewport().set_input_as_handled()
-		if is_open:
-			if _journal.visible:
-				_close_journal()
-			elif _settings.visible:
-				_settings.visible = false
-				_menu.visible = true
-				_first.grab_focus()
-			else:
-				close()
+		back()
+
+
+## Esc, Start, the touch pause button and Android's back button: open the
+## menu, or step back out of it.
+func back() -> void:
+	if is_open:
+		if _journal.visible:
+			_close_journal()
+		elif _settings.visible:
+			Game.save_settings()
+			_settings.visible = false
+			_menu.visible = true
+			_first.grab_focus()
 		else:
-			open()
+			close()
+	else:
+		open()
 
 
 func open() -> void:
@@ -166,8 +181,19 @@ func open() -> void:
 	_settings.visible = false
 	_journal.visible = false
 	_scraps.text = "Planogram scraps found: %d / %d" % [Game.scraps.size(), Scraps.ALL.size()]
+	_controls.text = _controls_text()
 	get_tree().paused = true
 	_first.grab_focus()
+
+
+func _controls_text() -> String:
+	match Game.last_device:
+		"touch":
+			var how := "Arrows" if Touch.move_mode() == Touch.Move.ARROWS else "Stick"
+			return "%s  move   ·   JUMP  hold it to go higher   ·   TALK   ·   WHISTLE for Dot   ·   Hold the screen to fast-forward talk   ·   Back button  pause" % how
+		"pad":
+			return "Move  stick or D-pad   ·   Jump  A   ·   Talk  X   ·   Whistle for Dot  Y   ·   Hold A to fast-forward talk   ·   Pause  Start"
+	return "Move  A/D or ←/→   ·   Jump  Space   ·   Talk  E   ·   Whistle for Dot  Q   ·   Hold Space to fast-forward talk   ·   Pause  Esc"
 
 
 func close() -> void:

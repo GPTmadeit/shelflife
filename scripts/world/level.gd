@@ -556,7 +556,10 @@ func _ev_controls_hint() -> void:
 	if Game.flag("hint_controls"):
 		return
 	Game.set_flag("hint_controls")
-	if Game.last_device == "pad":
+	if Game.last_device == "touch":
+		var how := "Arrows" if Touch.move_mode() == Touch.Move.ARROWS else "Stick"
+		hud.hint("%s  move      JUMP  hold it to go higher      TALK  to chat" % how, 10.0)
+	elif Game.last_device == "pad":
 		hud.hint("Stick  move        A  jump  (hold it to go higher)        X  talk", 10.0)
 	else:
 		hud.hint("A / D  move        Space  jump  (hold it to go higher)        E  talk", 10.0)
@@ -584,6 +587,7 @@ func _on_crack(n: int) -> void:
 	if Game.dev.has("trace"):
 		print("CRACK %d at (%.1f, %.1f)" % [n, player.global_position.x, player.global_position.y])
 	Game.count(act, "cracks")
+	Game.buzz(70, 0.8)
 	hud.shell(n)
 	hud.flash(0.28)
 	hitstop(0.08)
@@ -602,6 +606,7 @@ func _on_died(reason: String) -> void:
 	if Game.dev.has("trace"):
 		print("DIED %s at (%.1f, %.1f)" % [reason, player.global_position.x, player.global_position.y])
 	Game.count(act, "deaths")
+	Game.buzz(160, 1.0)
 	if reason != "late":
 		hud.flash(0.4, 0.3)
 		hitstop(0.11)
@@ -878,7 +883,32 @@ func on_boost() -> void:
 
 ## The whistle, along the bottom of the screen.
 func _ev_dot_hint() -> void:
-	hud.hint("%s  whistle for Dot:  a boost on flat ground,  a soft landing below a drop." % Game.glyph("call"), 11.0)
+	hud.hint("%s for Dot:  a boost on flat ground,  a soft landing below a drop." % Game.cue("call", "whistle"), 11.0)
+
+
+# --- touch controls, the back button ------------------------------------------------
+
+## What the touch controls (touch.gd) should offer right now.
+func touch_context() -> Dictionary:
+	var paused: bool = get_tree().paused or pause_menu.is_open
+	return {
+		"play": not paused and not Game.busy and not _dying and player.alive and not player.locked,
+		"talk": _interact_target != null,
+		"call": dot_follow,
+		"pause": not paused,
+		"bubble": hud.prompt_rect(),
+	}
+
+
+## Android's back button: the pause menu, or a step back out of it.
+func go_back() -> void:
+	pause_menu.back()
+
+
+## The app went into the background: pause, unless it already is.
+func auto_pause() -> void:
+	if not pause_menu.is_open and not _dying:
+		pause_menu.open()
 
 
 func _update_hide() -> void:
@@ -967,4 +997,4 @@ func _update_prompt() -> void:
 		return
 	var sp := cam.unproject_position(hp)
 	Actor.prompted = _interact_target
-	hud.prompt("%s  Talk" % Game.glyph("interact"), sp)
+	hud.prompt("Talk" if Game.last_device == "touch" else "%s  Talk" % Game.glyph("interact"), sp)

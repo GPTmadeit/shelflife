@@ -100,12 +100,18 @@ func _ready() -> void:
 	_shell.offset_right = -24
 	_shell.offset_bottom = 120
 	_shell.draw.connect(_draw_shell)
+	_shell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_shell)
 	# prompt
 	_prompt = PanelContainer.new()
 	_prompt.add_theme_stylebox_override("panel", Kit.panel(Color(0.05, 0.05, 0.07, 0.85), 12, 2, Color(1, 0.8, 0.3), 14))
 	_prompt_label = Kit.label("", 24, Color(1, 0.97, 0.9), Kit.body_font(800))
 	_prompt.add_child(_prompt_label)
+	# on a touchscreen, the bubble over someone's head is a Talk button too
+	_prompt.gui_input.connect(func(e: InputEvent):
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			_prompt.accept_event()
+			Touch.tap("interact"))
 	_prompt.visible = false
 	_root.add_child(_prompt)
 	# toast
@@ -137,6 +143,7 @@ func _ready() -> void:
 	_card.add_child(_card_big)
 	_card.add_child(_card_small)
 	_card.modulate.a = 0.0
+	_card.mouse_filter = Control.MOUSE_FILTER_IGNORE   # see-through when faded out, so clicks reach the Talk bubble
 	_root.add_child(_card)
 	# scrap popup
 	_scrap = PanelContainer.new()
@@ -209,6 +216,8 @@ func _process(dt: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if get_tree().paused:
+		return
 	if _scrap_open and (event.is_action_pressed("advance") or event.is_action_pressed("interact") or (event is InputEventMouseButton and event.pressed)):
 		get_viewport().set_input_as_handled()
 		_scrap_open = false
@@ -288,9 +297,17 @@ func prompt_hide() -> void:
 	_prompt.visible = false
 
 
-## A line of help along the bottom of the screen for a few seconds.
+## Where the Talk bubble is (nowhere: an empty rect).
+func prompt_rect() -> Rect2:
+	return _prompt.get_global_rect() if _prompt.visible else Rect2()
+
+
+## A line of help along the bottom of the screen for a few seconds (above
+## the touch controls, when they're there).
 func hint(text: String, secs := 9.0) -> void:
 	_hint_label.text = text
+	_hint.offset_top = -250.0 if Touch.showing() else -70.0
+	_hint.offset_bottom = _hint.offset_top
 	_hint.visible = true
 	_hint.size = Vector2.ZERO
 	if _hint_tween:
@@ -322,6 +339,12 @@ func flash(strength := 0.3, secs := 0.22) -> void:
 
 func toast(text: String) -> void:
 	_toast.text = text
+	# bottom right, or under the shell when the Jump button lives down there
+	var top := Touch.showing()
+	_toast.anchor_top = 0.0 if top else 1.0
+	_toast.anchor_bottom = _toast.anchor_top
+	_toast.offset_top = 128.0 if top else -64.0
+	_toast.offset_bottom = _toast.offset_top + 40.0
 	var tw := create_tween()
 	tw.tween_property(_toast, "modulate:a", 1.0, 0.25)
 	tw.tween_interval(2.2)
@@ -383,7 +406,8 @@ func hide_card() -> void:
 func scrap(title: String, verse: String, count_text: String) -> void:
 	_scrap_title.text = title
 	_scrap_text.text = verse
-	(_scrap.get_node("VBoxContainer/Hint") if _scrap.has_node("VBoxContainer/Hint") else _scrap.get_child(0).get_child(2)).text = count_text + "   ·   press %s" % Game.glyph("advance")
+	var go_on := "tap to read on" if Game.last_device == "touch" else "press %s" % Game.glyph("advance")
+	(_scrap.get_node("VBoxContainer/Hint") if _scrap.has_node("VBoxContainer/Hint") else _scrap.get_child(0).get_child(2)).text = count_text + "   ·   " + go_on
 	_scrap.visible = true
 	_scrap.scale = Vector2(0.8, 0.8)
 	_scrap.pivot_offset = _scrap.size * 0.5

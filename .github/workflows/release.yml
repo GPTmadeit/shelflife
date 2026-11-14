@@ -38,6 +38,11 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME doesn't match the game version $v"; exit 1
           fi
           grep -q "^## $v " CHANGELOG.md || { echo "::error::CHANGELOG.md has no '## $v' section"; exit 1; }
+          IFS=. read -r major minor patch <<< "$v"
+          code=$(( major * 10000 + minor * 100 + patch ))
+          for c in $(grep -oP '^version/code=\K\d+' export_presets.cfg); do
+            [ "$c" = "$code" ] || { echo "::error::export_presets.cfg has Android version code $c, not $code (run tools/set_version.sh $v)"; exit 1; }
+          done
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
       - name: Install Godot and export templates
@@ -50,6 +55,25 @@ jobs:
           mkdir -p "$dest" && unzip -q templates.tpz && mv templates/* "$dest"/
           rm -rf godot.zip templates.tpz templates
 
+      # The APKs need Java (for apksigner) and the Android SDK, which the
+      # runner has. They're signed with the release key from the repository's
+      # secrets: every release has to carry the same key, or phones won't
+      # take it as an update.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Point Godot at the Android SDK and the signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.SHELFLIFE_KEYSTORE_B64 }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] || { echo "::error::the SHELFLIFE_KEYSTORE_B64 secret is missing"; exit 1; }
+          mkdir -p ~/.config/godot
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\nexport/android/android_sdk_path = "%s"\nexport/android/java_sdk_path = "%s"\n' \
+            "$ANDROID_HOME" "$JAVA_HOME" > ~/.config/godot/editor_settings-4.7.tres
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
       - name: Import the project
         run: godot --headless --path . --import > /dev/null 2>&1 || true
 
@@ -59,7 +83,30 @@ jobs:
           grep -q "CHECK OK" check.log
 
       - name: Build the release files
-        run: tools/package.sh --testkit testkit
+        env:
+          GODOT_ANDROID_KEYSTORE_RELEASE_PATH: ${{ runner.temp }}/release.jks
+          GODOT_ANDROID_KEYSTORE_RELEASE_USER: shelflife
+          GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD: ${{ secrets.SHELFLIFE_KEYSTORE_PASSWORD }}
+        run: |
+          tools/package.sh --testkit testkit
+          rm -f "$RUNNER_TEMP/release.jks"
+
+      - name: Check the APKs
+        run: |
+          v=${{ steps.version.outputs.version }}
+          aapt=$(ls -d "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          for a in arm64 x86_64; do
+            "$aapt" dump badging "dist/ShelfLife-android-$a.apk" > badging.txt
+            head -1 badging.txt
+            grep -q "^package: name='com.gptmadeit.shelflife'.*versionName='$v'" badging.txt || { echo "::error::the $a APK isn't com.gptmadeit.shelflife $v"; exit 1; }
+            grep -q "REQUEST_INSTALL_PACKAGES" badging.txt || { echo "::error::the $a APK can't install its own updates"; exit 1; }
+          done
+
+      # A thumb on the stick walks, JUMP jumps, a second finger reads on.
+      - name: Touch controls drive the game
+        run: |
+          mkdir -p touch && (cd touch && unzip -q ../dist/ShelfLife-linux-x86_64.zip)
+          GAME=touch/ShelfLife.x86_64 tests/touch_test.sh
 
       # The exported game plays each act by itself (auto-read dialogue, a bot
       # walking right, no fall damage) and has to reach the end card.
@@ -122,8 +169,40 @@ jobs:
       - name: Update from 0.0.0 (${{ matrix.mode }})
         run: tools/update_test.sh ${{ runner.os == 'Windows' && 'windows' || 'linux' }} dist testkit ${{ matrix.mode }}
 
+  # The same on Android: a 0.0.0 APK finds this build on a local server,
+  # downloads it and hands it to Android's installer, whose Update button the
+  # test presses. The phone has to end up with this build's exact APK.
+  android-update-test:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+      - uses: actions/download-artifact@v4
+        with:
+          name: testkit
+          path: testkit
+      - name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Update from 0.0.0 on an Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-snapshot
+          disable-animations: true
+          script: tools/android_update_test.sh dist testkit
+
   publish:
-    needs: [build, update-test]
+    needs: [build, update-test, android-update-test]
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     env:
@@ -175,3 +254,13 @@ jobs:
           plat=${{ runner.os == 'Windows' && 'windows' || 'linux' }}
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" -p manifest.json -p "ShelfLife-$plat-x86_64.zip" -D published
           tools/update_test.sh "$plat" published testkit github
+      - name: The published APKs are the ones the manifest names
+        if: runner.os == 'Linux'
+        run: |
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" -p 'ShelfLife-android-*.apk' -D published
+          for a in arm64 x86_64; do
+            want=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["platforms"]["android-" + sys.argv[2]]["apk"]["sha256"])' published/manifest.json "$a")
+            got=$(sha256sum "published/ShelfLife-android-$a.apk" | cut -d' ' -f1)
+            [ "$got" = "$want" ] || { echo "::error::the published $a APK doesn't match manifest.json"; exit 1; }
+            echo "android-$a: $got"
+          done

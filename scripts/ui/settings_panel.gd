@@ -1,16 +1,19 @@
 extends PanelContainer
-## Volume sliders, display and comfort options. Emits `closed` on Back.
+## Volume sliders, display, touch and comfort options. Emits `closed` on
+## Back, and `customize` when the touch controls should be laid out (the
+## screen that owns this panel hides itself and calls Touch.edit()).
 
 const Kit = preload("res://scripts/ui/ui_kit.gd")
 
 signal closed
+signal customize
 
 var _first: Control
 
 
 func _ready() -> void:
 	add_theme_stylebox_override("panel", Kit.panel(Color(0.06, 0.06, 0.08, 0.96), 22, 3, Color(1, 0.8, 0.3), 40))
-	custom_minimum_size = Vector2(720, 0)
+	custom_minimum_size = Vector2(760, 0)
 	var v := VBoxContainer.new()
 	v.add_theme_constant_override("separation", 14)
 	add_child(v)
@@ -23,7 +26,9 @@ func _ready() -> void:
 	_slider(v, "Voices", "voice", 0.0, 1.0)
 	_slider(v, "Text speed", "text_speed", 0.5, 2.5)
 	_quality(v)
-	_check(v, "Fullscreen", "fullscreen")
+	if not Game.mobile():
+		_check(v, "Fullscreen", "fullscreen")
+	_touch(v)
 	_check(v, "Screen shake", "shake")
 	_check(v, "Check for updates", "updates")
 	var back := Kit.button("Back", 30)
@@ -84,6 +89,30 @@ func _quality(v: VBoxContainer) -> void:
 		Game.apply_settings()
 		Sfx.play("ui_move", -8.0))
 	h.add_child(o)
+
+
+## When the touch controls show, and the way in to moving them about.
+func _touch(v: VBoxContainer) -> void:
+	var h := _row(v, "Touch controls")
+	var o := OptionButton.new()
+	o.add_item("Auto", 0)
+	o.add_item("On", 1)
+	o.add_item("Off", 2)
+	o.selected = clampi(int(Game.settings.get("touch", 0)), 0, 2)
+	o.focus_mode = Control.FOCUS_ALL
+	o.add_theme_font_override("font", Kit.body_font(700))
+	o.add_theme_font_size_override("font_size", 24)
+	o.item_selected.connect(func(i: int):
+		Game.settings["touch"] = i
+		Sfx.play("ui_move", -8.0))
+	h.add_child(o)
+	var b := Kit.button("Customize", 24)
+	b.alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.pressed.connect(func():
+		Game.save_settings()
+		Sfx.play("ui_ok", -8.0)
+		customize.emit())
+	h.add_child(b)
 
 
 func _check(v: VBoxContainer, text: String, key: String) -> void:

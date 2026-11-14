@@ -145,9 +145,10 @@ func _process(dt: float) -> void:
 	_t += dt
 	if _arrow.visible:
 		_arrow.offset_top = -82 + sin(_t * 6.0) * 4.0
-	# Keep the button held to fast-forward: lines fill in at once and move on.
-	# (Only a press that started on a line counts, so a held jump can't do it.)
-	if _held and Input.is_action_pressed("advance") and not _choosing:
+	# Keep the button (or a finger on the screen) held to fast-forward: lines
+	# fill in at once and move on. Only a press that started on a line counts,
+	# so a held jump can't do it.
+	if _held and (Input.is_action_pressed("advance") or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)) and not _choosing:
 		_hold_t += dt
 		if _hold_t > 0.45:
 			_ff_t -= dt
@@ -164,6 +165,8 @@ func _process(dt: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if get_tree().paused:
+		return   # a click on the pause menu isn't for us
 	if _choosing:
 		if event is InputEventKey and event.pressed and not event.echo:
 			var k: int = event.physical_keycode - KEY_1
@@ -179,9 +182,8 @@ func _input(event: InputEvent) -> void:
 	if not press:
 		return
 	get_viewport().set_input_as_handled()
-	if event.is_action_pressed("advance"):
-		_held = true
-		_hold_t = 0.0
+	_held = true
+	_hold_t = 0.0
 	if _typing:
 		_skip = true
 	elif _waiting:
@@ -201,6 +203,8 @@ func _speaker_style(who: String) -> Dictionary:
 ## Shows a line and waits for the player. Awaitable.
 func say(who: String, text: String, speaker: Node = null) -> void:
 	var info := _speaker_style(who)
+	if Game.dev.has("trace"):
+		print("SAY %s: %s" % [who, text.left(48)])
 	_size_panel(220)
 	_panel.visible = true
 	_tag.visible = true

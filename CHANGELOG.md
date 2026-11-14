@@ -2,6 +2,19 @@
 
 Each version's section here becomes its release notes on GitHub.
 
+## 0.5.0 (2026-11-13)
+
+**Shelf Life on Android, with touch controls you can rearrange.**
+
+- **Android.** `ShelfLife-android-arm64.apk` runs on phones and tablets with Android 7.0 or newer (`ShelfLife-android-x86_64.apk` is for Chromebooks and emulators). It plays sideways either way up, starts on Low graphics, and stops at 60 frames a second to spare the battery.
+- **Touch controls.** A stick on the left that comes to wherever your thumb lands, JUMP, TALK and WHISTLE on the right, and a pause button at the top. Hold JUMP to go higher, as with a key. TALK lights up when someone's close enough to talk to, and the Talk bubble over their head works as a button too. WHISTLE shows up once Dot is with you.
+- **Put them where you like.** Settings → Touch controls → Customize: drag any control somewhere else, tap one and set its size, and set how see-through they are. Move with a stick that follows your thumb, a stick that stays put, or two arrow buttons. The short buzz on presses, cracks and deaths can be turned off there too, and "Put them back" restores the layout.
+- In a conversation, tap anywhere to read on and hold to fast-forward. A second finger works while your thumb is still on the stick.
+- Android's Back button pauses, steps back out of menus, and leaves the game from the title screen. Switching to another app pauses the game.
+- The Android version updates itself too. The title screen offers the new version, downloads it, checks it and opens Android's installer. The first time, Android asks you to allow installs from Shelf Life: allow it, then press Update again.
+- The touch controls show while you play on a touchscreen and hide when you pick up a gamepad or the keyboard. Settings → Touch controls can keep them on or off instead, on any system.
+- With a mouse, a click in the pause menu could go to the conversation behind it instead: the line moved on and the button didn't press. Clicks in the pause menu now stay there.
+
 ## 0.4.0 (2026-11-12)
 
 **Dot earns her keep.** Once she's with you, whistle (Q or F, or Y on a gamepad) and she lies down for you.

@@ -16,11 +16,14 @@ var act := 1                   ## which act the checkpoint belongs to
 var settings := {
 	"master": 0.9, "music": 0.7, "sfx": 0.85, "voice": 0.75,
 	"fullscreen": false, "shake": true, "text_speed": 1.0, "quality": 2, "updates": true,
+	# touch controls (see scripts/ui/touch.gd): 0 = while you use the touchscreen, 1 = always, 2 = never
+	"touch": 0, "touch_move": 0, "touch_opacity": 0.7, "touch_vibrate": true, "touch_layout": {},
 }
-var last_device := "kb"        ## "kb" or "pad": picks the button glyphs in prompts
+var last_device := "kb"        ## "kb", "pad" or "touch": picks the button names in prompts
 var dev := {}                  ## parsed developer arguments (see boot.gd)
 var busy := false              ## a conversation or cutscene is running
 var _last_bark := -100.0
+var _back_at := -1000
 
 
 ## One speech bubble at a time, store-wide.
@@ -36,8 +39,16 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_setup_buses()
 	_setup_input()
+	if mobile():
+		last_device = "touch"
+		Engine.max_fps = 60   # phones at 90 or 120 Hz would draw twice the frames for nothing
 	load_settings()
 	apply_settings()
+
+
+## A phone or tablet.
+func mobile() -> bool:
+	return OS.has_feature("mobile")
 
 
 func _input(event: InputEvent) -> void:
@@ -45,8 +56,31 @@ func _input(event: InputEvent) -> void:
 		last_device = "pad"
 	elif event is InputEventJoypadMotion and absf(event.axis_value) > 0.5:
 		last_device = "pad"
-	elif event is InputEventKey or event is InputEventMouseButton:
-		last_device = "kb"
+	elif event is InputEventScreenTouch:
+		last_device = "touch"
+	elif (event is InputEventKey and event.keycode != KEY_BACK) or (event is InputEventMouseButton and event.device != InputEvent.DEVICE_ID_EMULATION):
+		last_device = "kb"   # (Android's Back button and the clicks made up from touches don't count)
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		# one press of Back arrives twice (and as a Back key too): act on it once
+		var now := Time.get_ticks_msec()
+		if now - _back_at > 300:
+			_back_at = now
+			back()
+	elif what == NOTIFICATION_APPLICATION_PAUSED and mobile():
+		# a call, the home button: stop the clock on whatever's chasing Baker
+		if current != null and is_instance_valid(current) and current.has_method("auto_pause"):
+			current.auto_pause()
+
+
+## Android's back button (or gesture): out of whatever's open, one step at a time.
+func back() -> void:
+	if Touch.back():
+		return
+	if current != null and is_instance_valid(current) and current.has_method("go_back"):
+		current.go_back()
 
 
 # --- screens ----------------------------------------------------------------
@@ -194,8 +228,10 @@ func load_settings() -> void:
 		settings[k] = cf.get_value("settings", k, settings[k])
 
 
-## Old Intel integrated graphics get Low; other integrated GPUs Medium.
+## Phones and old Intel integrated graphics get Low; other integrated GPUs Medium.
 func _default_quality() -> int:
+	if mobile():
+		return 0
 	var gpu := RenderingServer.get_video_adapter_name().to_lower()
 	if gpu.contains("hd graphics") or gpu.contains("gma") or gpu.contains("llvmpipe"):
 		return 0
@@ -218,8 +254,8 @@ func apply_settings() -> void:
 	_bus_volume("Ambience", settings.sfx)
 	_bus_volume("Voice", settings.voice)
 	apply_graphics()
-	if dev.has("shot"):
-		return  # screenshots keep the window they were given
+	if dev.has("shot") or mobile():
+		return  # screenshots keep the window they were given; phones are always full screen
 	var fs: bool = settings.fullscreen
 	var mode := DisplayServer.window_get_mode()
 	var is_fs := mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
@@ -245,7 +281,12 @@ func apply_graphics() -> void:
 	var vp := get_viewport()
 	vp.msaa_3d = Viewport.MSAA_2X if q >= 2 else Viewport.MSAA_DISABLED
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
-	vp.scaling_3d_scale = 1.0 if q >= 1 else 0.75
+	var s := 1.0 if q >= 1 else 0.75
+	if mobile():
+		# phone screens are dense: the 3D is drawn at most this many lines tall
+		var lines: float = [720.0, 900.0, 1080.0][clampi(q, 0, 2)]
+		s = minf(s, lines / maxf(float(get_window().size.y), 1.0))
+	vp.scaling_3d_scale = clampf(s, 0.4, 1.0)
 	graphics_changed.emit()
 
 
@@ -313,9 +354,22 @@ func _setup_input() -> void:
 	_bind("call", [_key(KEY_Q), _key(KEY_F), _pad(JOY_BUTTON_Y)])
 
 
-## Button glyph for an action, matching the device the player last touched.
+## Button glyph for an action, matching the device the player last touched
+## (on a touchscreen, the name on the on-screen button).
 func glyph(action: String) -> String:
 	var pad := last_device == "pad"
+	if last_device == "touch":
+		match action:
+			"interact":
+				return "TALK"
+			"jump":
+				return "JUMP"
+			"advance":
+				return "Tap"
+			"pause":
+				return "Pause"
+			"call":
+				return "WHISTLE"
 	match action:
 		"interact":
 			return "X" if pad else "E"
@@ -328,3 +382,17 @@ func glyph(action: String) -> String:
 		"call":
 			return "Y" if pad else "Q"
 	return action
+
+
+## An action and what it does, for hints: "Q  whistle" with a keyboard,
+## "Y  whistle" with a gamepad, just "WHISTLE" (the button's name) on a touchscreen.
+func cue(action: String, verb: String) -> String:
+	if last_device == "touch":
+		return glyph(action)
+	return "%s  %s" % [glyph(action), verb]
+
+
+## A short buzz, on phones (Settings → Touch controls → Customize → Vibrate).
+func buzz(ms: int, strength := 0.5) -> void:
+	if last_device == "touch" and mobile() and bool(settings.get("touch_vibrate", true)):
+		Input.vibrate_handheld(ms, strength)

@@ -10,6 +10,14 @@ extends Node
 ##   --flags a,b,c            story flags to set first
 ##   --dlg <node>             start a dialogue node right away (needs --cp)
 ##   --act a@t0-t1,...        hold input actions between times (seconds)
+##   --touch                  touch controls on, as if on a phone
+##   --touch-edit             open the touch controls' customize screen after a second
+##   --touch-act a@t0-t1;a>b@t0-t1   fingers on the screen: each one goes down
+##                            at a at t0, slides to b over the next 0.2 s if
+##                            given, and lifts at t1. A spot is x,y in the game's
+##                            own coordinates, a control's name (move, jump,
+##                            talk, call, pause), "bubble" (the Talk bubble over
+##                            someone's head), or for b, +dx,dy from a.
 ##   --gallery                character gallery
 ##   --godmode                no falling damage, the Narc never calls cleanup
 ##   --nolights, --novig, --noblob   hide the lamps / the vignette / the blob shadows (to measure what they cost)
@@ -22,6 +30,9 @@ extends Node
 func _ready() -> void:
 	Game.main = self
 	Game.dev = _parse(OS.get_cmdline_user_args())
+	if Game.dev.has("touch") or Game.dev.has("touch-act"):
+		Game.settings["touch"] = 1
+		Game.last_device = "touch"
 	if Game.dev.has("shot") or Game.dev.has("fps"):
 		# hidden test windows: a compositor-throttled vsync would stall the game
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
@@ -71,6 +82,9 @@ func _parse(args: PackedStringArray) -> Dictionary:
 			"--act":
 				d.act = _acts(args[i + 1])
 				i += 1
+			"--touch-act":
+				d["touch-act"] = _touches(args[i + 1])
+				i += 1
 			"--quit":
 				d.quit = float(args[i + 1])
 				i += 1
@@ -94,6 +108,19 @@ func _parse(args: PackedStringArray) -> Dictionary:
 					d[a.substr(2)] = true
 		i += 1
 	return d
+
+
+## "move>+130,0@1-3;jump@2-2.2;800,300@4-4.1" -> [{a, b, t0, t1}]
+func _touches(s: String) -> Array:
+	var out := []
+	for part in s.split(";", false):
+		var at := part.find("@")
+		var where := part.substr(0, at).split(">")
+		var times := part.substr(at + 1).split("-")
+		var t0 := float(times[0])
+		out.append({"a": where[0], "b": where[1] if where.size() > 1 else "", "t0": t0,
+			"t1": float(times[1]) if times.size() > 1 else t0 + 0.12, "down": false})
+	return out
 
 
 ## "jump@1.0-1.2,move_right@0.5-3" -> [{name, t0, t1}]

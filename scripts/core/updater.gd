@@ -10,6 +10,11 @@ extends Node
 ## *.old until the next launch, and the game then restarts on the new
 ## version. Saves and settings live in the user folder, so they carry over.
 ##
+## On Android the game is one APK. The updater downloads the new APK (for
+## this phone's processor), checks its SHA-256 sum, and hands it to Android's
+## own installer, which asks before it replaces anything. The APKs are signed
+## with the same key, so the update keeps the saves and settings.
+##
 ## The repository is public: no account or token is involved. The only
 ## requests go to github.com (and the storage it redirects to), carrying a
 ## "ShelfLife/<version>" user agent and nothing else.
@@ -44,6 +49,8 @@ var updated_from := ""       ## set on the first launch after an update
 var _exe := ""               ## captured at startup: on Linux /proc/self/exe dangles once replaced
 var _pck := ""
 var _plat := ""
+var _android := false        ## an APK install: updates go through Android's installer
+var _handed_off := false     ## Android's installer has the new APK
 var _entry := {}
 var _source := ""
 var _http: HTTPRequest
@@ -62,6 +69,12 @@ func _ready() -> void:
 	_http.use_threads = true
 	_http.max_redirects = 0   # followed by hand in _fetch, so every hop stays on https
 	add_child(_http)
+	if OS.has_feature("template") and OS.has_feature("android"):
+		_android = true
+		_plat = "android-" + Engine.get_architecture_name()   # android-arm64, android-x86_64
+		_cleanup()
+		_read_marker()
+		return
 	if OS.has_feature("template") and (OS.has_feature("linux") or OS.has_feature("windows")):
 		_exe = OS.get_executable_path()
 		_pck = _find_pck()
@@ -73,7 +86,7 @@ func _ready() -> void:
 	_read_marker()
 
 
-## Exported Linux and Windows builds can update themselves.
+## Exported Linux, Windows and Android builds can update themselves.
 func supported() -> bool:
 	return state != OFF
 
@@ -114,6 +127,11 @@ func check() -> void:
 		_go(FAILED, "Version %s is out, but not for this system yet." % latest)
 		return
 	_entry = e
+	if _android:
+		full = true
+		download_bytes = int(_entry.apk.size)
+		_go(AVAILABLE, "Version %s is out (%s download)." % [latest, _mb(download_bytes)])
+		return
 	var mine: String = await _in_thread(_sha256_file.bind(_exe))
 	full = Game.dev.has("update-full") or mine != str(_entry.exe.sha256)
 	download_bytes = int(_entry.zip.size) if full else int(_entry.pck.size)
@@ -126,6 +144,9 @@ func install() -> void:
 	_cancelled = false
 	_stalled = false
 	install_failed = false
+	if _android:
+		await _install_apk()
+		return
 	if not _writable(_exe.get_base_dir()):
 		_fail("The game can't write to its own folder, so it can't update itself there. Get the new version from the release page.")
 		return
@@ -173,6 +194,64 @@ func install() -> void:
 	restart()
 
 
+## Android: fetch the APK into the game's own files (once), check it, and
+## open Android's installer on it. If the player backs out of the installer,
+## the button stays, and opens it again without downloading again.
+func _install_apk() -> void:
+	var spec: Dictionary = _entry.apk
+	var dir := OS.get_user_data_dir().path_join("update")
+	DirAccess.make_dir_recursive_absolute(dir)
+	# named for the version: Android's installer brings back a window it left
+	# open for the very same file (an earlier update's "App installed") instead
+	# of installing this one
+	var apk := dir.path_join("ShelfLife-%s-%s.apk" % [latest, _plat])
+	var have: String = await _in_thread(_sha256_file.bind(apk)) if FileAccess.file_exists(apk) else ""
+	if have != str(spec.sha256):
+		var part := apk + ".part"
+		_log("install apk")
+		progress = 0.0
+		_seen_bytes = 0
+		_seen_t = _now()
+		_go(DOWNLOADING, "Downloading version %s…" % latest)
+		set_process(true)
+		var res: Dictionary = await _fetch(_file_url(str(spec.file)), part)
+		set_process(false)
+		if _cancelled:
+			DirAccess.remove_absolute(part)
+			_go(AVAILABLE, "Update cancelled. Version %s is out (%s download)." % [latest, _mb(download_bytes)])
+			return
+		if res.code != 200:
+			DirAccess.remove_absolute(part)
+			_fail("The download stalled. Try again." if _stalled else "The download failed (%s)." % _why(res))
+			return
+		progress = 1.0
+		_go(INSTALLING, "Checking the download…")
+		var sum: String = await _in_thread(_sha256_file.bind(part))
+		if sum != str(spec.sha256):
+			DirAccess.remove_absolute(part)
+			_fail("The download was damaged on the way. Try again.")
+			return
+		DirAccess.remove_absolute(apk)
+		if DirAccess.rename_absolute(part, apk) != OK:
+			DirAccess.remove_absolute(part)
+			_fail("Couldn't save the update. Try again.")
+			return
+	var f := FileAccess.open(MARKER, FileAccess.WRITE)
+	if f != null:
+		f.store_string(JSON.stringify({"from": Version.VERSION, "to": latest}))
+		f.close()
+	_log("open installer")
+	var err := OS.shell_open(apk)
+	if err != OK:
+		_fail("Android wouldn't open its installer (%s). Get the new version from the release page." % error_string(err))
+		return
+	_handed_off = true
+	# The first time, Android asks to allow installs from Shelf Life, and after
+	# that it may drop back here instead of carrying on: pressing Update again
+	# reopens the installer on the same download.
+	_go(AVAILABLE, "Android's installer takes it from here. If it asked you to allow installs from Shelf Life, allow it, then press Update again.")
+
+
 func cancel() -> void:
 	if state == DOWNLOADING:
 		_cancelled = true
@@ -216,8 +295,8 @@ func unattended() -> void:
 	await check()
 	if state == AVAILABLE:
 		await install()
-	if state == RESTARTING:
-		return
+	if state == RESTARTING or _handed_off:
+		return   # (on Android, the installer replaces this copy when it's done)
 	get_tree().quit(0 if state == LATEST else 1)
 
 
@@ -308,7 +387,14 @@ func _rename(from: String, to: String) -> Error:
 
 ## Leftovers from an earlier update: replaced files and unfinished downloads.
 ## On Windows the previous engine may still be closing; its copy goes next time.
+## On Android, the APKs that were handed to the installer.
 func _cleanup() -> void:
+	if _android:
+		var ud := DirAccess.open(OS.get_user_data_dir().path_join("update"))
+		if ud != null:
+			for f in ud.get_files():
+				ud.remove(f)
+		return
 	var d := DirAccess.open(_exe.get_base_dir())
 	if d == null:
 		return
@@ -334,6 +420,7 @@ func _read_marker() -> void:
 	DirAccess.remove_absolute(MARKER)
 	if d is Dictionary and str(d.get("to", "")) == Version.VERSION:
 		updated_from = str(d.get("from", ""))
+		_log("updated from %s to %s" % [updated_from, Version.VERSION])
 
 
 func _writable(dir: String) -> bool:
@@ -349,7 +436,7 @@ func _writable(dir: String) -> bool:
 func _valid(e: Variant) -> bool:
 	if not e is Dictionary:
 		return false
-	for k in ["pck", "zip", "exe"]:
+	for k in (["apk"] if _android else ["pck", "zip", "exe"]):
 		var f: Variant = e.get(k)
 		if not f is Dictionary:
 			return false
